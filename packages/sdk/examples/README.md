@@ -1,13 +1,30 @@
 # Examples
 
-Runnable scripts, one per contract. They are documentation and smoke tests at
-the same time: they run against a real network, so an encoding or decoding
-mistake in the SDK fails here rather than passing quietly the way a mocked unit
-test would.
+Runnable scripts, one per contract. They are documentation and integration
+tests at the same time: they run against a real network, so an encoding or
+decoding mistake in the SDK fails here rather than passing quietly the way a
+mocked unit test would. Each one asserts what it demonstrates (`support.ts`),
+so a wrong result exits non-zero instead of just printing.
 
 ```bash
 pnpm tsx examples/stream-lifecycle.ts
 ```
+
+## Running them all
+
+`run-integration.sh` does the setup below for you: it creates and
+friendbot-funds two throwaway testnet accounts, deploys a fresh instance of
+each contract, runs every example, and exits non-zero if any fails. It needs
+the `stellar` CLI and the contracts built to wasm.
+
+```bash
+WASM_DIR=/path/to/sororail-contracts/target/wasm32v1-none/release \
+  pnpm --filter @sororail/sdk test:integration
+```
+
+The scheduled `integration` job in `.github/workflows/ci.yml` does exactly
+this. Only `stream-lifecycle.ts` has been run against live testnet by hand so
+far; the other four have not been recorded as passing until that job has.
 
 ## Setup
 
@@ -20,6 +37,12 @@ export SOROBAN_SECRET_KEY=$(stellar keys show alice)
 stellar keys generate --network testnet --fund bob
 export RECIPIENT_PUBLIC_KEY=$(stellar keys address bob)
 export RECIPIENT_SECRET_KEY=$(stellar keys show bob)
+
+# Bob also plays beneficiary and payee. The recurring example needs his secret
+# to run the charge step, and the stream example for the withdrawal.
+export BENEFICIARY_PUBLIC_KEY=$RECIPIENT_PUBLIC_KEY
+export PAYEE_PUBLIC_KEY=$RECIPIENT_PUBLIC_KEY
+export PAYEE_SECRET_KEY=$RECIPIENT_SECRET_KEY
 ```
 
 Then deploy the instance the example needs — see
@@ -54,10 +77,10 @@ reusable indefinitely.
 | Example | Covers |
 |---|---|
 | `stream-lifecycle.ts` | create, simulate, sign, send, read back, withdraw, and the conservation invariant on-chain |
-| `escrow-lifecycle.ts` | init, fund, release, and why the beneficiary cannot release to themselves |
+| `escrow-lifecycle.ts` | init, fund, release; the contract holds the funds, then pays exactly the beneficiary |
 | `vesting-lifecycle.ts` | the schedule as a pure function of time, the cliff, and revoke returning only the unvested part |
-| `recurring-subscription.ts` | authorize, why the token allowance is the real cap, and why skipped periods are forfeited |
-| `batch-payout.ts` | preview before signing, reading the cap, and chunking an oversized payroll |
+| `recurring-subscription.ts` | authorize, approve the token allowance (the real cap), wait for the period, charge as the payee, cancel |
+| `batch-payout.ts` | preview before signing (and that it sends nothing), reading the cap, chunking an oversized payroll, and the recipient's balance |
 
 ## A thing worth knowing before you build a UI
 

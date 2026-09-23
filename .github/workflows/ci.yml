@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
   pull_request:
+  # The integration job below only runs on these two.
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -13,6 +17,7 @@ jobs:
   check:
     name: typecheck / test / build
     runs-on: ubuntu-latest
+    if: github.event_name != 'schedule'
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -54,12 +59,16 @@ jobs:
       - run: pnpm exec changeset status --since=origin/main || true
 
   # The examples talk to a real network, so they run on a schedule rather than
-  # on every PR: they need funded accounts and freshly deployed contract
-  # instances, and testnet resets periodically.
+  # on every PR. Each one asserts what it demonstrates, so together they are the
+  # SDK's integration suite. The job funds its own throwaway testnet accounts
+  # through friendbot (no secrets) and deploys a fresh instance of each contract
+  # per run, because testnet resets and every contract but batch_payout is
+  # claimed permanently by its first `create`/`init`.
   integration:
     name: examples against testnet
     runs-on: ubuntu-latest
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -68,8 +77,19 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Not yet wired up
+      - uses: stellar/stellar-cli@v23.0.1
+      - name: Check out the contracts
+        uses: actions/checkout@v4
+        with:
+          repository: Sororail/sororail-contracts
+          path: contracts
+      - name: Build the contracts
+        working-directory: contracts
         run: |
-          echo "Needs a funded testnet key in secrets and a deploy step that"
-          echo "creates fresh contract instances per run. See examples/README.md."
-          exit 0
+          rustup target add wasm32v1-none
+          stellar contract build
+      - name: Run the examples
+        working-directory: packages/sdk
+        env:
+          WASM_DIR: ${{ github.workspace }}/contracts/target/wasm32v1-none/release
+        run: pnpm test:integration

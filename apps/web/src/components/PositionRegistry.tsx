@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { explorerContract } from "@/lib/network";
+import { ContractLink } from "@/components/ContractLink";
 import {
   addPosition,
   listPositions,
@@ -112,14 +112,9 @@ export function PositionHeader({ position }: { position: Position }) {
     <div className="spread">
       <div>
         <h3>{position.label}</h3>
-        <a
-          className="addr"
-          href={explorerContract(position.contractId)}
-          target="_blank"
-          rel="noreferrer"
-        >
+        <ContractLink className="addr" id={position.contractId}>
           {position.contractId}
-        </a>
+        </ContractLink>
       </div>
       <button
         type="button"

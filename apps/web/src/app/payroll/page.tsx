@@ -10,6 +10,7 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Confirm } from "@/components/Confirm";
+import { ContractLink } from "@/components/ContractLink";
 import { ErrorNotice, SuccessNotice } from "@/components/Feedback";
 import { Address, Money } from "@/components/Money";
 import {
@@ -17,7 +18,6 @@ import {
   NATIVE_TOKEN,
   NETWORK_PASSPHRASE,
   RPC_URL,
-  explorerContract,
 } from "@/lib/network";
 import { useWallet } from "@/lib/wallet";
 
@@ -106,25 +106,38 @@ export default function PayrollPage() {
       .catch(() => setCap(null));
   }, [client, address]);
 
+  // Everything below derives from `parsed`, and a payroll can run to thousands
+  // of lines, so each value is memoised: a keystroke in the textarea that
+  // changes `csv` recomputes them once, and unrelated state changes (busy,
+  // receipt, the confirm dialog) recompute nothing. `valid` in particular must
+  // keep a stable identity, or `payments`, `duplicates` and `batches` would
+  // all be rebuilt on every render regardless of their own memoisation.
   const parsed = useMemo(() => parseCsv(csv), [csv]);
-  const invalid = parsed.filter((line) => line.error);
-  const valid = parsed.filter((line) => !line.error);
+  const invalid = useMemo(() => parsed.filter((line) => line.error), [parsed]);
+  const valid = useMemo(() => parsed.filter((line) => !line.error), [parsed]);
 
   // Errors always render in full -- an operator needs to see every bad row to
   // fix their CSV. Valid rows are capped, since there is nothing left to do
   // with them but confirm the total, and thousands of DOM rows for a large
   // payroll would make every keystroke slow.
   const hiddenValidCount = Math.max(0, valid.length - MAX_VISIBLE_VALID_ROWS);
-  const visibleValidLines = new Set(
-    valid.slice(0, MAX_VISIBLE_VALID_ROWS).map((line) => line.line),
-  );
-  const visible = parsed.filter(
-    (line) => line.error || visibleValidLines.has(line.line),
-  );
+  const visible = useMemo(() => {
+    const visibleValidLines = new Set(
+      valid.slice(0, MAX_VISIBLE_VALID_ROWS).map((line) => line.line),
+    );
+    return parsed.filter(
+      (line) => line.error || visibleValidLines.has(line.line),
+    );
+  }, [parsed, valid]);
 
   const payments = useMemo<Payment[]>(
     () => valid.map((line) => ({ to: line.to, amount: toStroops(line.amount) })),
     [valid],
+  );
+
+  const total = useMemo(
+    () => payments.reduce((sum, payment) => sum + payment.amount, 0n),
+    [payments],
   );
 
   // Duplicates are legitimate on chain -- two invoices for one contractor --
@@ -181,8 +194,6 @@ export default function PayrollPage() {
       setBusy(false);
     }
   }
-
-  const total = payments.reduce((sum, payment) => sum + payment.amount, 0n);
 
   return (
     <div className="stack">
@@ -347,14 +358,9 @@ export default function PayrollPage() {
 
       <p className="small muted">
         Batch payout contract{" "}
-        <a
-          className="addr"
-          href={explorerContract(BATCH_PAYOUT_CONTRACT)}
-          target="_blank"
-          rel="noreferrer"
-        >
+        <ContractLink className="addr" id={BATCH_PAYOUT_CONTRACT}>
           {BATCH_PAYOUT_CONTRACT}
-        </a>
+        </ContractLink>
         . It is stateless and holds no funds, so this one deployment is shared
         by everybody.
       </p>
