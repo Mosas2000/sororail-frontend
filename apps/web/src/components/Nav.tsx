@@ -62,8 +62,8 @@ export function Nav() {
       </div>
 
       {error ? (
-        <div className="nav__inner" style={{ paddingTop: 0 }}>
-          <div className="notice notice--error" style={{ width: "100%" }}>
+        <div className="nav__inner nav__feedback">
+          <div className="notice notice--error">
             <div>{error}</div>
             <div className="notice__detail">
               Freighter is the supported wallet. A testnet account also needs

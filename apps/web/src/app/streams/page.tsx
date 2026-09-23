@@ -23,7 +23,7 @@ export default function StreamsPage() {
     <div className="stack">
       <div>
         <h1>Streams</h1>
-        <p className="muted" style={{ marginTop: "0.35rem" }}>
+        <p className="muted page-intro">
           Continuous per-second transfer. Accrual is computed from ledger time,
           so a balance rises without any transaction being sent.
         </p>

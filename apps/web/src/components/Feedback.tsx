@@ -10,7 +10,8 @@ import { explorerTx } from "@/lib/network";
  *
  * A raw contract code is never shown. The SDK has already decoded the failure
  * into a sentence; this adds the recovery step where there is one, and keeps
- * the code visible only as small secondary detail for a bug report.
+ * technical details behind a disclosure for a bug report. Unknown failures
+ * use a generic message instead of exposing raw browser or library output.
  */
 
 function recoveryFor(error: unknown): string | null {
@@ -41,8 +42,20 @@ export function ErrorNotice({ error }: { error: unknown }) {
   if (!error) return null;
 
   const recovery = recoveryFor(error);
+  const isSdkError =
+    error instanceof ContractError ||
+    error instanceof NetworkError ||
+    error instanceof ValidationError;
   const message =
-    error instanceof Error ? error.message : "Something went wrong.";
+    isSdkError ? error.message : "Something went wrong. Please try again.";
+  const details =
+    error instanceof ContractError
+      ? `${error.contract} · ${error.variant} · code ${error.code}`
+      : !isSdkError && error instanceof Error
+        ? `${error.name}: ${error.message}`
+        : typeof error === "string"
+          ? error
+          : null;
 
   let heading = "That did not work";
   if (error instanceof ValidationError) heading = "Check the details";
@@ -53,10 +66,11 @@ export function ErrorNotice({ error }: { error: unknown }) {
       <div className="notice__title">{heading}</div>
       <div>{message}</div>
       {recovery ? <div className="notice__detail">{recovery}</div> : null}
-      {error instanceof ContractError ? (
-        <div className="notice__detail" style={{ marginTop: "0.35rem" }}>
-          {error.contract} · {error.variant} · code {error.code}
-        </div>
+      {details ? (
+        <details className="notice__detail notice__technical">
+          <summary>Technical details</summary>
+          <div>{details}</div>
+        </details>
       ) : null}
     </div>
   );
@@ -95,8 +109,8 @@ export function EmptyState({
 }) {
   return (
     <div className="empty">
-      <div style={{ fontWeight: 600, color: "var(--text)" }}>{title}</div>
-      <div className="small" style={{ marginTop: "0.25rem" }}>
+      <div className="empty__title">{title}</div>
+      <div className="small empty__description">
         {children}
       </div>
       {action ? <div className="empty__action">{action}</div> : null}

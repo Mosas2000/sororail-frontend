@@ -188,7 +188,7 @@ export default function PayrollPage() {
     <div className="stack">
       <div>
         <h1>Payroll</h1>
-        <p className="muted" style={{ marginTop: "0.35rem" }}>
+        <p className="muted page-intro">
           Pay many recipients in one transaction. All-or-nothing: if any
           transfer fails, nobody is paid.
         </p>
@@ -205,7 +205,7 @@ export default function PayrollPage() {
 
       <div className="card stack stack--tight">
         <h2>Recipients</h2>
-        <p className="small muted" style={{ margin: 0 }}>
+        <p className="small muted m-0">
           One per line: <code>account address, amount</code>. Lines starting
           with <code>#</code> are ignored.
         </p>
@@ -250,7 +250,7 @@ export default function PayrollPage() {
                     </td>
                     <td>
                       {line.error ? (
-                        <span style={{ color: "var(--danger)" }}>{line.error}</span>
+                        <span className="text-danger">{line.error}</span>
                       ) : (
                         <span className="muted">ok</span>
                       )}
@@ -306,7 +306,7 @@ export default function PayrollPage() {
           <div>
             <div className="label">Total</div>
             <Money value={total} size="lg" />
-            <span className="small muted" style={{ marginLeft: "0.5rem" }}>
+            <span className="small muted ml-md">
               {valid.length} recipient{valid.length === 1 ? "" : "s"}
               {invalid.length > 0 ? `, ${invalid.length} line(s) to fix` : ""}
             </span>

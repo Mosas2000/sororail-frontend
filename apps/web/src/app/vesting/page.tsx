@@ -23,7 +23,7 @@ export default function VestingPage() {
     <div className="stack">
       <div>
         <h1>Vesting</h1>
-        <p className="muted" style={{ marginTop: "0.35rem" }}>
+        <p className="muted page-intro">
           Nothing vests before the cliff. After it, vesting is linear until the
           schedule ends.
         </p>

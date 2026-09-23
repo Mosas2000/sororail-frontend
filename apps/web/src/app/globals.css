@@ -38,6 +38,10 @@
   --radius: 6px;
   --radius-lg: 10px;
 
+  --space-xs: 0.25rem;
+  --space-sm: 0.35rem;
+  --space-md: 0.5rem;
+
   --font-body: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system,
     "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   /*
@@ -151,6 +155,26 @@ h3 {
   flex-wrap: wrap;
 }
 
+.row--end {
+  justify-content: flex-end;
+}
+
+.m-0 {
+  margin: 0;
+}
+
+.mb-0 {
+  margin-bottom: 0;
+}
+
+.ml-md {
+  margin-left: var(--space-md);
+}
+
+.page-intro {
+  margin-top: var(--space-sm);
+}
+
 .grid {
   display: grid;
   gap: 1rem;
@@ -169,6 +193,11 @@ h3 {
 .card--flush {
   padding: 0;
   overflow: hidden;
+}
+
+.card--link {
+  text-decoration: none;
+  color: inherit;
 }
 
 .banner {
@@ -244,6 +273,10 @@ h3 {
 
 .muted {
   color: var(--text-muted);
+}
+
+.text-danger {
+  color: var(--danger);
 }
 
 .small {
@@ -453,6 +486,15 @@ td.numeric {
   font-size: 0.8125rem;
 }
 
+.notice__technical {
+  margin-top: var(--space-sm);
+  overflow-wrap: anywhere;
+}
+
+.notice__technical > summary {
+  cursor: pointer;
+}
+
 /* ------------------------------------------------------------ empty state */
 
 .empty {
@@ -463,6 +505,15 @@ td.numeric {
 
 .empty__action {
   margin-top: 0.75rem;
+}
+
+.empty__title {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.empty__description {
+  margin-top: var(--space-xs);
 }
 
 /* ----------------------------------------------------------------- modal */
@@ -525,6 +576,14 @@ td.numeric {
   color: var(--text);
   text-decoration: none;
   margin-right: 0.5rem;
+}
+
+.nav__feedback {
+  padding-top: 0;
+}
+
+.nav__feedback > .notice {
+  width: 100%;
 }
 
 .nav__link {

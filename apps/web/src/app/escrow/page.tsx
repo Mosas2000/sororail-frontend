@@ -25,7 +25,7 @@ export default function EscrowPage() {
     <div className="stack">
       <div>
         <h1>Escrow</h1>
-        <p className="muted" style={{ marginTop: "0.35rem" }}>
+        <p className="muted page-intro">
           Funds held by the contract until released, refunded, or split by an
           arbiter. The beneficiary cannot release to themselves.
         </p>

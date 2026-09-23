@@ -50,6 +50,8 @@ function isPosition(value: unknown): value is Position {
   return (
     typeof candidate["contractId"] === "string" &&
     typeof candidate["label"] === "string" &&
+    typeof candidate["addedAt"] === "number" &&
+    Number.isFinite(candidate["addedAt"]) &&
     typeof candidate["kind"] === "string" &&
     ["stream", "vesting", "escrow", "recurring"].includes(
       candidate["kind"] as string,
