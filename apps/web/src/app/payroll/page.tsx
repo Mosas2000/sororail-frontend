@@ -2,8 +2,6 @@
 
 import {
   BatchPayoutClient,
-  ValidationError,
-  toStroops,
   type Payment,
   type Receipt,
 } from "@sororail/sdk";
@@ -19,60 +17,10 @@ import {
   NETWORK_PASSPHRASE,
   RPC_URL,
 } from "@/lib/network";
+import { parseCsv, type ParsedLine } from "@/lib/payroll";
 import { useWallet } from "@/lib/wallet";
 
-interface ParsedLine {
-  line: number;
-  to: string;
-  amount: string;
-  error?: string;
-}
-
-/**
- * Caps how many valid rows the table renders.
- *
- * Every row re-renders on each keystroke, so a payroll well beyond the
- * contract's batch cap (thousands of lines pasted at once) would otherwise
- * turn every edit into a many-thousand-node re-render. Invalid rows are never
- * capped — those are exactly the ones the operator needs to see to fix their
- * CSV.
- */
 const MAX_VISIBLE_VALID_ROWS = 200;
-
-/**
- * Parses pasted CSV of `address,amount`.
- *
- * Every line is reported, valid or not, so the operator sees exactly which row
- * of their spreadsheet is wrong rather than a single "invalid CSV".
- */
-function parseCsv(text: string): ParsedLine[] {
-  return text
-    .split("\n")
-    .map((raw, index) => ({ raw: raw.trim(), index }))
-    .filter(({ raw }) => raw.length > 0 && !raw.startsWith("#"))
-    .map(({ raw, index }): ParsedLine => {
-      const [to = "", amount = ""] = raw.split(",").map((part) => part.trim());
-      const line = index + 1;
-
-      if (!/^G[A-Z2-7]{55}$/.test(to)) {
-        return { line, to, amount, error: "Not a valid account address (G…)" };
-      }
-      try {
-        const stroops = toStroops(amount);
-        if (stroops <= 0n) {
-          return { line, to, amount, error: "Amount must be greater than zero" };
-        }
-      } catch (error) {
-        return {
-          line,
-          to,
-          amount,
-          error: error instanceof ValidationError ? error.message : "Invalid amount",
-        };
-      }
-      return { line, to, amount };
-    });
-}
 
 export default function PayrollPage() {
   const { address, signer, connect } = useWallet();
@@ -106,6 +54,7 @@ export default function PayrollPage() {
       .catch(() => setCap(null));
   }, [client, address]);
 
+
   // Everything below derives from `parsed`, and a payroll can run to thousands
   // of lines, so each value is memoised: a keystroke in the textarea that
   // changes `csv` recomputes them once, and unrelated state changes (busy,
@@ -131,7 +80,7 @@ export default function PayrollPage() {
   }, [parsed, valid]);
 
   const payments = useMemo<Payment[]>(
-    () => valid.map((line) => ({ to: line.to, amount: toStroops(line.amount) })),
+    () => valid.map((line) => ({ to: line.to, amount: line.stroops! })),
     [valid],
   );
 
@@ -256,7 +205,7 @@ export default function PayrollPage() {
                       {line.error ? (
                         <span className="muted">{line.amount || "—"}</span>
                       ) : (
-                        <Money value={toStroops(line.amount)} />
+                        <Money value={line.stroops!} />
                       )}
                     </td>
                     <td>
@@ -376,8 +325,8 @@ export default function PayrollPage() {
           ]}
           irreversible={
             batches.length > 1
-              ? `The payments settle on chain and cannot be reversed. This is sent as ${batches.length} separate transactions — each is all-or-nothing on its own, so an earlier batch stays paid even if a later one fails.`
-              : "The payments settle on chain and cannot be reversed. If any single transfer fails, the whole batch is rolled back and nobody is paid."
+              ? `The payments settle on chain and cannot be reversed. This is sent as ${batches.length} separate transactions — each is all-or-nothing on its own, so an earlier batch stays paid even if a later one fails. Ensure your account balance covers the total amount.`
+              : "The payments settle on chain and cannot be reversed. If any single transfer fails, the whole batch is rolled back and nobody is paid. Ensure your account balance covers the total amount."
           }
           confirmLabel={`Pay ${valid.length}`}
           busy={busy}
