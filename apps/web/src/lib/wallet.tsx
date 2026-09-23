@@ -1,6 +1,6 @@
 "use client";
 
-import { FreighterSigner, type Signer } from "@sororail/sdk";
+import type { Signer } from "@sororail/sdk";
 import {
   createContext,
   useCallback,
@@ -21,6 +21,12 @@ import { NETWORK_PASSPHRASE } from "./network";
  * takes a `Signer` and never asks for a secret. There is deliberately no code
  * path here that accepts a secret key, not even for development — the moment
  * one exists, someone pastes a real one into it.
+ *
+ * `FreighterSigner` is imported dynamically (not at module scope) because
+ * `@sororail/sdk`'s entrypoint re-exports every client alongside
+ * `@stellar/stellar-sdk`. `WalletProvider` wraps the whole app in
+ * `RootLayout`, so a static import here would pull that entire SDK into every
+ * route, including ones that never touch a wallet.
  */
 
 interface WalletState {
@@ -50,6 +56,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setError(null);
     setDisconnected(false);
     try {
+      const { FreighterSigner } = await import("@sororail/sdk");
       const connected = await FreighterSigner.connect();
       setSigner(connected);
     } catch (cause) {
@@ -78,7 +85,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (disconnected) return;
     let cancelled = false;
-    void FreighterSigner.connect()
+    void import("@sororail/sdk")
+      .then(({ FreighterSigner }) => FreighterSigner.connect())
       .then((restored) => {
         if (!cancelled) setSigner(restored);
       })

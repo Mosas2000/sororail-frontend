@@ -29,6 +29,17 @@ interface ParsedLine {
 }
 
 /**
+ * Caps how many valid rows the table renders.
+ *
+ * Every row re-renders on each keystroke, so a payroll well beyond the
+ * contract's batch cap (thousands of lines pasted at once) would otherwise
+ * turn every edit into a many-thousand-node re-render. Invalid rows are never
+ * capped — those are exactly the ones the operator needs to see to fix their
+ * CSV.
+ */
+const MAX_VISIBLE_VALID_ROWS = 200;
+
+/**
  * Parses pasted CSV of `address,amount`.
  *
  * Every line is reported, valid or not, so the operator sees exactly which row
@@ -98,6 +109,18 @@ export default function PayrollPage() {
   const parsed = useMemo(() => parseCsv(csv), [csv]);
   const invalid = parsed.filter((line) => line.error);
   const valid = parsed.filter((line) => !line.error);
+
+  // Errors always render in full -- an operator needs to see every bad row to
+  // fix their CSV. Valid rows are capped, since there is nothing left to do
+  // with them but confirm the total, and thousands of DOM rows for a large
+  // payroll would make every keystroke slow.
+  const hiddenValidCount = Math.max(0, valid.length - MAX_VISIBLE_VALID_ROWS);
+  const visibleValidLines = new Set(
+    valid.slice(0, MAX_VISIBLE_VALID_ROWS).map((line) => line.line),
+  );
+  const visible = parsed.filter(
+    (line) => line.error || visibleValidLines.has(line.line),
+  );
 
   const payments = useMemo<Payment[]>(
     () => valid.map((line) => ({ to: line.to, amount: toStroops(line.amount) })),
@@ -208,7 +231,7 @@ export default function PayrollPage() {
                 </tr>
               </thead>
               <tbody>
-                {parsed.map((line) => (
+                {visible.map((line) => (
                   <tr key={line.line}>
                     <td className="muted">{line.line}</td>
                     <td>
@@ -236,6 +259,19 @@ export default function PayrollPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        ) : null}
+
+        {hiddenValidCount > 0 ? (
+          <div className="notice notice--info">
+            <div className="notice__title">
+              {hiddenValidCount} more valid row{hiddenValidCount === 1 ? "" : "s"} not shown
+            </div>
+            <div className="notice__detail">
+              Only the first {MAX_VISIBLE_VALID_ROWS} valid rows are rendered.
+              They are still included in the total and in what gets paid — any
+              row with an error is always shown, no matter how many there are.
+            </div>
           </div>
         ) : null}
 
