@@ -55,7 +55,11 @@ export function Schedule({
         {marks.map((mark) => {
           const at = percent(mark.at, start, end);
           return (
-            <div key={mark.label} className="schedule__mark" style={{ left: `${at}%` }}>
+            <div
+              key={`${mark.label}-${mark.at}`}
+              className="schedule__mark"
+              style={{ left: `${at}%` }}
+            >
               <span className="schedule__mark-label">{mark.label}</span>
             </div>
           );

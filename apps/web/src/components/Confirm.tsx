@@ -70,8 +70,8 @@ export function Confirm({
         <h2>{title}</h2>
 
         <div className="modal__consequence">
-          {lines.map((line) => (
-            <div className="modal__line" key={line.label}>
+          {lines.map((line, index) => (
+            <div className="modal__line" key={index}>
               <span className="muted">{line.label}</span>
               <span>{line.value}</span>
             </div>
