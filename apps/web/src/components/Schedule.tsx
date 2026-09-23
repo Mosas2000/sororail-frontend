@@ -16,7 +16,8 @@ export interface ScheduleMark {
 }
 
 function formatDate(seconds: bigint): string {
-  const date = new Date(Number(seconds) * 1000);
+  const ms = Number(seconds % 1_000_000_000n) * 1000;
+  const date = new Date(ms);
   return date.toLocaleDateString(undefined, {
     year: "numeric",
     month: "short",
@@ -28,8 +29,8 @@ function percent(value: bigint, start: bigint, end: bigint): number {
   const span = end - start;
   if (span <= 0n) return 0;
   const offset = value - start;
-  if (offset <= 0n) return 0;
-  if (offset >= span) return 100;
+  if (offset < 0n) return 0;
+  if (offset > span) return 100;
   // Scale before converting so precision survives large timestamps.
   return Number((offset * 10_000n) / span) / 100;
 }
@@ -92,7 +93,9 @@ export function WhenLabel({ at, now }: { at: bigint; now: bigint }) {
       ? `in ${days}d ${hours}h`
       : hours > 0
         ? `in ${hours}h ${minutes}m`
-        : `in ${minutes}m`;
+        : minutes > 0
+          ? `in ${minutes}m`
+          : `in <1m`;
 
   return <span title={absolute}>{relative}</span>;
 }
