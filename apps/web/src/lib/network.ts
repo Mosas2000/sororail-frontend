@@ -1,4 +1,5 @@
 import { Networks } from "@stellar/stellar-sdk";
+import { TESTNET_DEFAULTS } from "@sororail/sdk";
 
 /**
  * Network and contract configuration.
@@ -10,12 +11,12 @@ import { Networks } from "@stellar/stellar-sdk";
 export const NETWORK_PASSPHRASE = Networks.TESTNET;
 
 export const RPC_URL =
-  process.env["NEXT_PUBLIC_RPC_URL"] ?? "https://soroban-testnet.stellar.org";
+  process.env["NEXT_PUBLIC_RPC_URL"] ?? TESTNET_DEFAULTS.rpcUrl;
 
 /** Native XLM's Stellar Asset Contract on testnet. */
 export const NATIVE_TOKEN =
   process.env["NEXT_PUBLIC_TOKEN_ID"] ??
-  "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC";
+  TESTNET_DEFAULTS.nativeToken;
 
 /**
  * The `batch_payout` deployment.

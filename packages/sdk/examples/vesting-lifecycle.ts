@@ -8,23 +8,8 @@
  * pnpm tsx examples/vesting-lifecycle.ts
  * ```
  */
-import { Networks } from "@stellar/stellar-sdk";
-
 import { ContractError, KeypairSigner, VestingClient, fromStroops } from "../src/index.js";
-
-const RPC_URL = process.env["RPC_URL"] ?? "https://soroban-testnet.stellar.org";
-const NETWORK = process.env["NETWORK_PASSPHRASE"] ?? Networks.TESTNET;
-const TOKEN =
-  process.env["TOKEN_ID"] ?? "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC";
-
-function required(name: string): string {
-  const value = process.env[name];
-  if (!value) {
-    console.error(`Set ${name} before running this example.`);
-    process.exit(1);
-  }
-  return value;
-}
+import { NETWORK, RPC_URL, TOKEN, required } from "./_shared.js";
 
 async function main(): Promise<void> {
   const signer = new KeypairSigner(required("SOROBAN_SECRET_KEY"));
