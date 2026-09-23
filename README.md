@@ -38,11 +38,17 @@ and
 [`30d080d7`](https://stellar.expert/explorer/testnet/tx/30d080d7e52279c0eee441447269752e2feafb29e792eb992057c9a89a307d33)
 — and the contract's conservation invariant held on-chain.
 
+**Not yet verified live:** the escrow, vesting, recurring and batch examples.
+Only the stream one has been run by hand. All five now assert what they
+demonstrate and are run by the scheduled `integration` job in
+[`ci.yml`](.github/workflows/ci.yml), which deploys a fresh instance of each
+contract to testnet — but that job has not yet reported a run, so treat those
+four as unrun until it does.
+
 Not yet done: the SDK is unpublished and the `@sororail` npm scope is not
-reserved. The escrow, vesting, recurring and batch examples typecheck but have
-not each been run live; only the stream one has. The app has no indexer, no
-database and no history feed — it is entirely client-side against Soroban RPC —
-and its wallet flows have not been exercised with a real Freighter extension.
+reserved. The app has no indexer, no database and no history feed — it is
+entirely client-side against Soroban RPC — and its wallet flows have not been
+exercised with a real Freighter extension.
 
 ## Running the app
 
@@ -52,6 +58,17 @@ pnpm --filter @sororail/web dev
 
 Then open http://localhost:3000. You will need
 [Freighter](https://freighter.app) and a funded testnet account.
+
+The app is configured through environment variables, all optional:
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `NEXT_PUBLIC_RPC_URL` | `https://soroban-testnet.stellar.org` | Soroban RPC endpoint. |
+| `NEXT_PUBLIC_EXPLORER_URL` | derived from the RPC URL | Block explorer base for transaction and contract links, e.g. `https://stellar.expert/explorer/testnet`. |
+
+Without `NEXT_PUBLIC_EXPLORER_URL`, an RPC on a testnet host links to the
+testnet explorer; any other RPC (a local quickstart node, futurenet) gets no
+explorer links rather than links that 404.
 
 ## Development
 
@@ -66,8 +83,9 @@ pnpm changeset     # describe a change for the next release
 Node ≥20. pnpm 10.
 
 Runnable examples live in [`packages/sdk/examples`](packages/sdk/examples) —
-they run against a real network, so they double as smoke tests. See their
-README for setup.
+they run against a real network and assert what they demonstrate, so they are
+the SDK's integration tests. `pnpm --filter @sororail/sdk test:integration`
+runs all five; see their README for setup.
 
 ## The SDK
 

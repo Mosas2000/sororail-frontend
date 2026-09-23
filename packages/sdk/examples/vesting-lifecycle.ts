@@ -9,7 +9,25 @@
  * ```
  */
 import { ContractError, KeypairSigner, VestingClient, fromStroops } from "../src/index.js";
+ testnet-rpc-validation-sdk-example-config
 import { NETWORK, RPC_URL, TOKEN, required } from "./_shared.js";
+
+import { check, checkEqual } from "./support.js";
+
+const RPC_URL = process.env["RPC_URL"] ?? "https://soroban-testnet.stellar.org";
+const NETWORK = process.env["NETWORK_PASSPHRASE"] ?? Networks.TESTNET;
+const TOKEN =
+  process.env["TOKEN_ID"] ?? "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC";
+
+function required(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    console.error(`Set ${name} before running this example.`);
+    process.exit(1);
+  }
+  return value;
+}
+ main
 
 async function main(): Promise<void> {
   const signer = new KeypairSigner(required("SOROBAN_SECRET_KEY"));
@@ -38,23 +56,54 @@ async function main(): Promise<void> {
   await create.simulate();
   console.log("created", (await create.signAndSend(signer)).hash);
 
+  const grant = await vesting.get();
+  checkEqual(grant.total, total, "grant total");
+  checkEqual(grant.cliff, 10n, "cliff span");
+  checkEqual(grant.duration, 60n, "duration span");
+  checkEqual(grant.revocable, true, "revocable");
+  checkEqual(grant.claimed, 0n, "claimed at creation");
+  checkEqual(grant.revokedAt, null, "revokedAt at creation");
+
   // The schedule is a pure function of the grant and a timestamp, so it can be
   // plotted for any point in time without sending anything.
+  const schedule: bigint[] = [];
   for (const offset of [0n, 10n, 30n, 60n]) {
     const vested = await vesting.vestedAmount(now + offset);
     console.log(`  t+${offset}s  vested ${fromStroops(vested)}`);
+    schedule.push(vested);
   }
+  checkEqual(schedule[0], 0n, "vested at start, before the cliff");
+  checkEqual(schedule[3], total, "vested at the end of the schedule");
+  check(
+    schedule.every((vested, i) => i === 0 || vested >= (schedule[i - 1] ?? 0n)),
+    "vesting never goes backwards",
+  );
 
-  console.log("waiting 15s to clear the cliff...");
-  await new Promise((resolve) => setTimeout(resolve, 15_000));
-  console.log("claimable now:", fromStroops(await vesting.claimable()));
+  // The cliff is 10s; wait well past it so a few seconds of clock skew between
+  // this machine and the ledger cannot leave nothing claimable.
+  console.log("waiting 20s to clear the cliff...");
+  await new Promise((resolve) => setTimeout(resolve, 20_000));
+  const claimableBefore = await vesting.claimable();
+  console.log("claimable now:", fromStroops(claimableBefore));
+  check(claimableBefore > 0n, "something is claimable after the cliff");
+  check(claimableBefore < total, "the grant is only partly vested at t+20s");
 
   // Revoking returns only the unvested part. Whatever had vested stays in the
   // contract and remains claimable by the beneficiary.
   const revoke = await vesting.revoke();
   const revoked = await revoke.signAndSend(signer);
   console.log("revoked, returned", fromStroops(revoked.result), "in", revoked.hash);
-  console.log("still claimable by beneficiary:", fromStroops(await vesting.claimable()));
+  const claimableAfter = await vesting.claimable();
+  console.log("still claimable by beneficiary:", fromStroops(claimableAfter));
+
+  // Only the unvested part came back, and the vested part stayed claimable, so
+  // between them the two account for the whole grant.
+  const revokedGrant = await vesting.get();
+  check(revokedGrant.revokedAt !== null, "revokedAt is recorded");
+  checkEqual(revokedGrant.returned, revoked.result, "returned amount on the grant");
+  check(revoked.result > 0n, "part of the grant was unvested and returned");
+  checkEqual(claimableAfter + revoked.result, total, "returned + still claimable");
+  console.log("verified: vesting lifecycle");
 }
 
 main().catch((error: unknown) => {

@@ -21,6 +21,7 @@
   "scripts": {
     "build": "tsup",
     "test": "vitest run",
+    "test:integration": "bash examples/run-integration.sh",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

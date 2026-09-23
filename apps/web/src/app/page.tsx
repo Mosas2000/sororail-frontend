@@ -1,12 +1,13 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { ContractLink } from "@/components/ContractLink";
 import {
   ConnectWalletCard,
   PositionCount,
   SubscriptionCount,
 } from "@/components/OverviewInteractive";
-import { BATCH_PAYOUT_CONTRACT, explorerContract } from "@/lib/network";
+import { BATCH_PAYOUT_CONTRACT } from "@/lib/network";
 
 export default function OverviewPage() {
   return (
@@ -64,14 +65,9 @@ export default function OverviewPage() {
           <SubscriptionCount />{" "}
           <code className="addr">batch_payout</code> is the exception — it is
           stateless, so one shared deployment serves everybody:{" "}
-          <a
-            href={explorerContract(BATCH_PAYOUT_CONTRACT)}
-            target="_blank"
-            rel="noreferrer"
-            className="addr"
-          >
+          <ContractLink id={BATCH_PAYOUT_CONTRACT} className="addr">
             {BATCH_PAYOUT_CONTRACT.slice(0, 8)}…
-          </a>
+          </ContractLink>
         </p>
       </div>
 
