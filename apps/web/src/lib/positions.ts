@@ -92,6 +92,60 @@ export function removePosition(contractId: string): void {
   write(read().filter((p) => p.contractId !== contractId));
 }
 
+/** Reinsert a previously removed position, e.g. from an undo toast. */
+export function restorePosition(position: Position): void {
+  const existing = read();
+  if (existing.some((p) => p.contractId === position.contractId)) return;
+  write([...existing, position]);
+}
+
+export function renamePosition(contractId: string, label: string): void {
+  const trimmed = label.trim();
+  if (!trimmed) return;
+  write(
+    read().map((p) => (p.contractId === contractId ? { ...p, label: trimmed } : p)),
+  );
+}
+
+/** Serialise the registry so it can be backed up or moved to another browser. */
+export function exportPositions(): string {
+  return JSON.stringify(read(), null, 2);
+}
+
+export interface ImportPositionsResult {
+  added: number;
+  skipped: number;
+}
+
+/**
+ * Merge positions from a previously exported JSON string into the
+ * registry. Existing contract IDs are left untouched (skipped) rather than
+ * overwritten, so importing never silently discards a local rename.
+ */
+export function importPositions(json: string): ImportPositionsResult {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(json);
+  } catch {
+    throw new Error("That file is not valid JSON.");
+  }
+  if (!Array.isArray(parsed)) {
+    throw new Error("Expected a JSON array of positions.");
+  }
+  const incoming = parsed.filter(isPosition);
+  if (incoming.length === 0) {
+    throw new Error("No valid positions found in that file.");
+  }
+
+  const existing = read();
+  const existingIds = new Set(existing.map((p) => p.contractId));
+  const toAdd = incoming.filter((p) => !existingIds.has(p.contractId));
+
+  write([...existing, ...toAdd]);
+
+  return { added: toAdd.length, skipped: incoming.length - toAdd.length };
+}
+
 /** A contract address is a 56-character `C…` strkey. */
 export function looksLikeContractId(value: string): boolean {
   return /^C[A-Z2-7]{55}$/.test(value.trim());

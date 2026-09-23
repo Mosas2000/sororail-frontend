@@ -3,6 +3,7 @@
 import { StreamClient, type Stream } from "@sororail/sdk";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { CardSkeleton } from "@/components/CardSkeleton";
 import { Confirm } from "@/components/Confirm";
 import { EmptyState, ErrorNotice, SuccessNotice } from "@/components/Feedback";
 import { Money, Address } from "@/components/Money";
@@ -144,7 +145,7 @@ function StreamCard({ position }: { position: Position }) {
     return (
       <div className="card">
         <PositionHeader position={position} />
-        <p className="small muted">Reading from the chain…</p>
+        <CardSkeleton />
       </div>
     );
   }

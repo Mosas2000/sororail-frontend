@@ -7,6 +7,7 @@ import {
   PositionCount,
   SubscriptionCount,
 } from "@/components/OverviewInteractive";
+import { PositionBackup } from "@/components/PositionRegistry";
 import { BATCH_PAYOUT_CONTRACT } from "@/lib/network";
 
 export default function OverviewPage() {
@@ -70,6 +71,8 @@ export default function OverviewPage() {
           </ContractLink>
         </p>
       </div>
+
+      <PositionBackup />
 
       <div className="notice notice--warn">
         <div className="notice__title">Not yet built</div>
