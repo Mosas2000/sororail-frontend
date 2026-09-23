@@ -4,39 +4,17 @@ import { ContractError, NetworkError, ValidationError } from "@sororail/sdk";
 import type { ReactNode } from "react";
 
 import { explorerTx } from "@/lib/network";
+import { recoveryFor } from "@/lib/recovery";
 
 /**
  * Errors say what happened and what to do about it.
  *
  * A raw contract code is never shown. The SDK has already decoded the failure
- * into a sentence; this adds the recovery step where there is one, and keeps
- * technical details behind a disclosure for a bug report. Unknown failures
- * use a generic message instead of exposing raw browser or library output.
+ * into a sentence; `recoveryFor` adds the next step for every variant, and
+ * this keeps technical details behind a disclosure for a bug report. Unknown
+ * failures use a generic message instead of exposing raw browser or library
+ * output.
  */
-
-function recoveryFor(error: unknown): string | null {
-  if (!(error instanceof ContractError)) return null;
-  switch (error.variant) {
-    case "StreamInsufficientAccrued":
-      return "The accrued balance moves as time passes. Refresh and try again with the amount shown, or withdraw everything available.";
-    case "RecurringPeriodNotElapsed":
-      return "Wait until the next charge date shown above. Periods that pass uncharged cannot be claimed later.";
-    case "BatchTooLarge":
-      return "Split the payroll into smaller batches. The app can do this for you — reload and try again.";
-    case "DeadlineNotReached":
-      return "Only the arbiter can act before the deadline. Wait, or ask the arbiter to refund.";
-    case "VestingCliffNotReached":
-      return "Nothing is claimable until the cliff date. The schedule above shows when that is.";
-    case "AlreadyInitialized":
-      return "This contract already holds a position. Deploy a new instance for a new one.";
-    case "NotInitialized":
-      return "This contract has not been set up yet. Create the position first.";
-    case "Unauthorized":
-      return "The connected wallet is not a party to this contract. Switch accounts and try again.";
-    default:
-      return null;
-  }
-}
 
 export function ErrorNotice({ error }: { error: unknown }) {
   if (!error) return null;
@@ -83,12 +61,14 @@ export function SuccessNotice({
   children: ReactNode;
   hash?: string;
 }) {
+  // No link when the configured network has no explorer to point at.
+  const href = hash ? explorerTx(hash) : null;
   return (
     <div className="notice notice--info">
       <div>{children}</div>
-      {hash ? (
+      {href ? (
         <div className="notice__detail">
-          <a href={explorerTx(hash)} target="_blank" rel="noreferrer">
+          <a href={href} target="_blank" rel="noreferrer">
             View transaction
           </a>
         </div>

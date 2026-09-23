@@ -9,8 +9,9 @@ import { Networks } from "@stellar/stellar-sdk";
  */
 export const NETWORK_PASSPHRASE = Networks.TESTNET;
 
-export const RPC_URL =
-  process.env["NEXT_PUBLIC_RPC_URL"] ?? "https://soroban-testnet.stellar.org";
+const DEFAULT_RPC_URL = "https://soroban-testnet.stellar.org";
+
+export const RPC_URL = process.env["NEXT_PUBLIC_RPC_URL"] ?? DEFAULT_RPC_URL;
 
 /** Native XLM's Stellar Asset Contract on testnet. */
 export const NATIVE_TOKEN =
@@ -34,13 +35,45 @@ export const BATCH_PAYOUT_CONTRACT =
 /** Where to send someone to fund a testnet account. */
 export const FRIENDBOT_URL = "https://friendbot.stellar.org";
 
-/** Block explorer, for making a transaction hash clickable. */
-export function explorerTx(hash: string): string {
-  return `https://stellar.expert/explorer/testnet/tx/${hash}`;
+const TESTNET_EXPLORER = "https://stellar.expert/explorer/testnet";
+
+/**
+ * Where the block explorer for the configured network lives, or `null`.
+ *
+ * `NEXT_PUBLIC_EXPLORER_URL` wins when set. Otherwise the base is derived from
+ * `RPC_URL`: an RPC on a testnet host maps to the testnet explorer, and
+ * anything else (a local quickstart node, futurenet, an unrecognised
+ * provider) has none, because a link into the wrong network's explorer 404s
+ * for every transaction and contract on it.
+ */
+export function resolveExplorerBase(
+  rpcUrl: string,
+  override?: string,
+): string | null {
+  const explicit = override?.trim().replace(/\/+$/, "");
+  if (explicit) return explicit;
+
+  try {
+    const { hostname } = new URL(rpcUrl);
+    return hostname.toLowerCase().includes("testnet") ? TESTNET_EXPLORER : null;
+  } catch {
+    return null;
+  }
 }
 
-export function explorerContract(id: string): string {
-  return `https://stellar.expert/explorer/testnet/contract/${id}`;
+const EXPLORER_BASE = resolveExplorerBase(
+  RPC_URL,
+  process.env["NEXT_PUBLIC_EXPLORER_URL"],
+);
+
+/** Block explorer link for a transaction, or `null` if the network has none. */
+export function explorerTx(hash: string): string | null {
+  return EXPLORER_BASE ? `${EXPLORER_BASE}/tx/${hash}` : null;
+}
+
+/** Block explorer link for a contract, or `null` if the network has none. */
+export function explorerContract(id: string): string | null {
+  return EXPLORER_BASE ? `${EXPLORER_BASE}/contract/${id}` : null;
 }
 
 /** Shortens an address for display without hiding which one it is. */

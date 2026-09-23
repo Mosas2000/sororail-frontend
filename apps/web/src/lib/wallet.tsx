@@ -11,7 +11,7 @@ import {
   type ReactNode,
 } from "react";
 
-import { NETWORK_PASSPHRASE } from "./network";
+import { NETWORK_PASSPHRASE, RPC_URL } from "./network";
 
 /**
  * Wallet connection.
@@ -137,7 +137,7 @@ export function useClientOptions(contractId: string) {
   return useMemo(
     () => ({
       contractId,
-      rpcUrl: process.env["NEXT_PUBLIC_RPC_URL"] ?? "https://soroban-testnet.stellar.org",
+      rpcUrl: RPC_URL,
       networkPassphrase: NETWORK_PASSPHRASE,
       ...(address ? { publicKey: address } : {}),
     }),

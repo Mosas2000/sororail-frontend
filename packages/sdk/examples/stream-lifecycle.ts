@@ -26,6 +26,7 @@ import {
   fromStroops,
   toStroops,
 } from "../src/index.js";
+import { check, checkEqual } from "./support.js";
 
 const RPC_URL = process.env["RPC_URL"] ?? "https://soroban-testnet.stellar.org";
 const NETWORK = process.env["NETWORK_PASSPHRASE"] ?? Networks.TESTNET;
@@ -95,6 +96,10 @@ async function main(): Promise<void> {
   const record = await stream.get();
   console.log("deposited", fromStroops(record.deposited));
   console.log("stop     ", new Date(Number(record.stop) * 1000).toISOString());
+  checkEqual(record.deposited, ratePerSecond * 60n, "deposited");
+  checkEqual(record.ratePerSecond, ratePerSecond, "rate per second");
+  checkEqual(record.withdrawn, 0n, "withdrawn at creation");
+  checkEqual(record.cancelledAt, null, "cancelledAt at creation");
 
   // Accrual is computed from ledger time at read time, so waiting changes the
   // answer without any transaction being sent.
@@ -104,10 +109,8 @@ async function main(): Promise<void> {
   const available = await stream.balanceOf(recipient);
   console.log("recipient can withdraw", fromStroops(available));
 
-  if (available <= 0n) {
-    console.log("nothing accrued yet; stopping here");
-    return;
-  }
+  check(available > 0n, "something has accrued after 12s");
+  check(available <= record.deposited, "accrual never exceeds the deposit");
 
   // --- 5. withdraw, as the recipient ------------------------------------
   // `withdraw` requires the recipient's own signature, so this only runs when
@@ -135,6 +138,13 @@ async function main(): Promise<void> {
     after.withdrawn + after.refunded + (await stream.remaining()) ===
     after.deposited;
   console.log("conservation holds:", conserved);
+
+  // Accrual keeps rising between the read and the withdrawal, so the amount
+  // taken is at least what was shown -- never less.
+  check(withdrawn.result >= available, "withdrew at least what had been shown");
+  checkEqual(after.withdrawn, withdrawn.result, "withdrawn recorded on the stream");
+  check(conserved, "withdrawn + refunded + remaining equals deposited");
+  console.log("verified: stream lifecycle");
 }
 
 main().catch((error: unknown) => {

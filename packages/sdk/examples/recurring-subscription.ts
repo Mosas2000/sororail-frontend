@@ -5,6 +5,7 @@
  * export SOROBAN_SECRET_KEY=S...          # payer, funded
  * export RECURRING_CONTRACT_ID=C...       # a freshly deployed instance
  * export PAYEE_PUBLIC_KEY=G...
+ * export PAYEE_SECRET_KEY=S...            # optional: runs the charge step
  * pnpm tsx examples/recurring-subscription.ts
  * ```
  *
@@ -20,6 +21,7 @@
 import { Networks } from "@stellar/stellar-sdk";
 
 import { ContractError, KeypairSigner, RecurringClient, fromStroops } from "../src/index.js";
+import { TokenClient, check, checkEqual, waitUntil } from "./support.js";
 
 const RPC_URL = process.env["RPC_URL"] ?? "https://soroban-testnet.stellar.org";
 const NETWORK = process.env["NETWORK_PASSPHRASE"] ?? Networks.TESTNET;
@@ -44,12 +46,21 @@ async function main(): Promise<void> {
     publicKey: signer.publicKey,
   });
 
+  const payee = required("PAYEE_PUBLIC_KEY");
+  const token = new TokenClient({
+    contractId: TOKEN,
+    rpcUrl: RPC_URL,
+    networkPassphrase: NETWORK,
+    publicKey: signer.publicKey,
+  });
+
   // A 30-second "month", so the example can actually reach a charge.
+  const amountPerPeriod = 1_000n;
   const authorize = await recurring.authorize({
     payer: signer.publicKey,
-    payee: required("PAYEE_PUBLIC_KEY"),
+    payee,
     token: TOKEN,
-    amountPerPeriod: 1_000n,
+    amountPerPeriod,
     periodSeconds: 30n,
     maxPeriods: 12,
   });
@@ -61,24 +72,69 @@ async function main(): Promise<void> {
     "first charge due",
     new Date(Number(record.nextChargeableAt) * 1000).toISOString(),
   );
-  console.log("chargeable now:", await recurring.isChargeable(), "(expected false)");
-  console.log("remaining periods:", await recurring.remainingPeriods());
+  checkEqual(record.payer, signer.publicKey, "payer");
+  checkEqual(record.payee, payee, "payee");
+  checkEqual(record.amountPerPeriod, amountPerPeriod, "amount per period");
+  checkEqual(record.maxPeriods, 12, "max periods");
+  checkEqual(record.periodsCharged, 0, "periods charged at authorization");
+  checkEqual(record.cancelled, false, "cancelled at authorization");
 
-  console.log(
-    "\nNOTE: the payee still cannot charge until the payer approves this",
-    "contract as a spender on the token. Use the token's approve() with",
-    `spender = ${recurring.contractId}.`,
-  );
+  const chargeable = await recurring.isChargeable();
+  console.log("chargeable now:", chargeable, "(expected false)");
+  checkEqual(chargeable, false, "chargeable before the first period elapses");
+  const remaining = await recurring.remainingPeriods();
+  console.log("remaining periods:", remaining);
+  checkEqual(remaining, 12, "remaining periods");
+
+  // `authorize` alone lets the payee take nothing. The token allowance is the
+  // real cap, so grant one period's worth: enough for exactly one charge.
+  const approve = await token.approve({
+    from: signer.publicKey,
+    spender: recurring.contractId,
+    amount: amountPerPeriod,
+  });
+  console.log("approved", (await approve.signAndSend(signer)).hash);
   console.log(
     "NOTE: if the payee skips a period it is gone -- the next charge is",
     "scheduled from the moment of the last charge, not from the missed due date.",
   );
 
+  // Charging needs the payee's own signature.
+  const payeeSecret = process.env["PAYEE_SECRET_KEY"];
+  if (payeeSecret) {
+    const payeeSigner = new KeypairSigner(payeeSecret);
+    checkEqual(payeeSigner.publicKey, payee, "PAYEE_SECRET_KEY matches PAYEE_PUBLIC_KEY");
+    const asPayee = new RecurringClient({
+      contractId: recurring.contractId,
+      rpcUrl: RPC_URL,
+      networkPassphrase: NETWORK,
+      publicKey: payeeSigner.publicKey,
+    });
+
+    // Poll ledger time rather than sleeping, so this does not depend on this
+    // machine's clock agreeing with the network's.
+    console.log("waiting for the first period to elapse...");
+    await waitUntil("the first charge to become due", () => asPayee.isChargeable());
+
+    const charge = await asPayee.charge();
+    const charged = await charge.signAndSend(payeeSigner);
+    console.log("charged", fromStroops(charged.result), "in", charged.hash);
+    checkEqual(charged.result, amountPerPeriod, "amount charged");
+    checkEqual((await recurring.get()).periodsCharged, 1, "periods charged");
+    checkEqual(await recurring.remainingPeriods(), 11, "remaining periods after a charge");
+    // The next charge is scheduled a full period out, not immediately.
+    checkEqual(await recurring.isChargeable(), false, "chargeable straight after a charge");
+  } else {
+    console.log("set PAYEE_SECRET_KEY to run the charge step");
+  }
+
   // Either party can cancel, effective immediately.
   const cancel = await recurring.cancel(signer.publicKey);
   console.log("\ncancelled", (await cancel.signAndSend(signer)).hash);
-  console.log("charges taken:", (await recurring.get()).periodsCharged);
-  void fromStroops;
+  const final = await recurring.get();
+  console.log("charges taken:", final.periodsCharged);
+  check(final.cancelled, "the authorization is marked cancelled");
+  console.log("verified: recurring subscription");
 }
 
 main().catch((error: unknown) => {
