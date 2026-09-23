@@ -10,9 +10,10 @@
  *
  * The instance must be fresh: `init` claims an escrow contract permanently.
  */
-import { Networks } from "@stellar/stellar-sdk";
-
 import { ContractError, EscrowClient, KeypairSigner, fromStroops } from "../src/index.js";
+ testnet-rpc-validation-sdk-example-config
+import { NETWORK, RPC_URL, TOKEN, required } from "./_shared.js";
+
 import { TokenClient, checkEqual } from "./support.js";
 
 const RPC_URL = process.env["RPC_URL"] ?? "https://soroban-testnet.stellar.org";
@@ -28,6 +29,7 @@ function required(name: string): string {
   }
   return value;
 }
+ main
 
 async function main(): Promise<void> {
   const signer = new KeypairSigner(required("SOROBAN_SECRET_KEY"));

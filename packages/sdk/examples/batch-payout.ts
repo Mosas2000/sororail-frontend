@@ -10,8 +10,6 @@
  * Unlike the other contracts, one batch_payout deployment serves everybody: it
  * holds no position and no funds.
  */
-import { Networks } from "@stellar/stellar-sdk";
-
 import {
   BatchPayoutClient,
   ContractError,
@@ -19,6 +17,9 @@ import {
   formatAmount,
   type Payment,
 } from "../src/index.js";
+ testnet-rpc-validation-sdk-example-config
+import { NETWORK, RPC_URL, TOKEN, required } from "./_shared.js";
+
 import { TokenClient, check, checkEqual } from "./support.js";
 
 const RPC_URL = process.env["RPC_URL"] ?? "https://soroban-testnet.stellar.org";
@@ -34,6 +35,7 @@ function required(name: string): string {
   }
   return value;
 }
+ main
 
 async function main(): Promise<void> {
   const signer = new KeypairSigner(required("SOROBAN_SECRET_KEY"));

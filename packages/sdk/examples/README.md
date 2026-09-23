@@ -53,8 +53,15 @@ in the contracts repo — and set its address:
 export STREAM_CONTRACT_ID=C...
 ```
 
-By default the examples use native XLM's Stellar Asset Contract on testnet.
-Override with `TOKEN_ID` to use another token.
+By default the examples use the SDK's shared `TESTNET_DEFAULTS` (testnet RPC,
+`Networks.TESTNET`, and native XLM's Stellar Asset Contract). Override them
+with `RPC_URL`, `NETWORK_PASSPHRASE`, or `TOKEN_ID` as needed.
+
+The web app uses the same defaults with browser-prefixed names:
+`NEXT_PUBLIC_RPC_URL` maps to `RPC_URL`, `NEXT_PUBLIC_TOKEN_ID` maps to
+`TOKEN_ID`, and its network passphrase is intentionally fixed to testnet rather
+than configurable. The web app validates the RPC's network at startup and
+refuses to operate if it does not match.
 
 ## Deploy a fresh instance for each run
 

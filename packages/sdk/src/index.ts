@@ -34,6 +34,7 @@
 
 export { BaseClient, PreparedCall } from "./clients/base.js";
 export type { ClientOptions, SentCall } from "./clients/base.js";
+export { TESTNET_DEFAULTS } from "./config.js";
 
 export { EscrowClient } from "./clients/escrow.js";
 export { StreamClient } from "./clients/stream.js";

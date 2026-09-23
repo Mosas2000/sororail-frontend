@@ -16,8 +16,6 @@
  * permanently and a second run against the same address fails with
  * `AlreadyInitialized`.
  */
-import { Networks } from "@stellar/stellar-sdk";
-
 import {
   ContractError,
   KeypairSigner,
@@ -26,6 +24,9 @@ import {
   fromStroops,
   toStroops,
 } from "../src/index.js";
+ testnet-rpc-validation-sdk-example-config
+import { NETWORK, RPC_URL, TOKEN as NATIVE_TOKEN, required } from "./_shared.js";
+
 import { check, checkEqual } from "./support.js";
 
 const RPC_URL = process.env["RPC_URL"] ?? "https://soroban-testnet.stellar.org";
@@ -43,6 +44,7 @@ function required(name: string): string {
   }
   return value;
 }
+ main
 
 async function main(): Promise<void> {
   const signer = new KeypairSigner(required("SOROBAN_SECRET_KEY"));

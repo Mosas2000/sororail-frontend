@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { GeistSans } from "geist/font/sans";
 
 import { Nav } from "@/components/Nav";
+import { NetworkGuard } from "@/components/NetworkGuard";
 import { WalletProvider } from "@/lib/wallet";
 
 import "./globals.css";
@@ -18,6 +19,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en" className={GeistSans.variable}>
       <body>
         <WalletProvider>
+          <NetworkGuard>
           {/*
            * The testnet warning is a permanent fixture, not a dismissible
            * toast. The contracts are unaudited, and the one thing this app
@@ -29,6 +31,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           </div>
           <Nav />
           <main className="shell">{children}</main>
+          </NetworkGuard>
         </WalletProvider>
       </body>
     </html>
