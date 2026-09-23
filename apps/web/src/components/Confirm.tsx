@@ -83,14 +83,14 @@ export function Confirm({
           <div className="notice__detail">{irreversible}</div>
         </div>
 
-        <p className="small muted" style={{ margin: 0 }}>
+        <p className="small muted m-0">
           Your wallet will ask you to sign after you confirm. Nothing is sent
           until you do.
         </p>
 
         {error ? <div className="notice notice--error">{error}</div> : null}
 
-        <div className="row" style={{ justifyContent: "flex-end" }}>
+        <div className="row row--end">
           <button type="button" onClick={onCancel} disabled={busy}>
             Cancel
           </button>

@@ -67,7 +67,7 @@ export function AddPositionForm({
   return (
     <form className="card stack stack--tight" onSubmit={submit}>
       <h3>Track an existing {noun}</h3>
-      <p className="small muted" style={{ margin: 0 }}>
+      <p className="small muted m-0">
         Each {noun} is its own deployed contract, so there is no way to look up
         yours from your account. Paste the address and this browser will
         remember it. The list is local only — every figure shown is read from
