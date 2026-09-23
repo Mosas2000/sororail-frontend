@@ -3,6 +3,7 @@
 import { EscrowClient, isTerminalEscrowState, type Escrow } from "@sororail/sdk";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { CardSkeleton } from "@/components/CardSkeleton";
 import { Confirm } from "@/components/Confirm";
 import { EmptyState, ErrorNotice, SuccessNotice } from "@/components/Feedback";
 import { Address, Money } from "@/components/Money";
@@ -127,7 +128,7 @@ function EscrowCard({ position }: { position: Position }) {
     return (
       <div className="card">
         <PositionHeader position={position} />
-        <p className="small muted">Reading from the chain…</p>
+        <CardSkeleton />
       </div>
     );
   }

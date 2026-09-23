@@ -32,6 +32,23 @@ export default function PayrollPage() {
   const [busy, setBusy] = useState(false);
   const [sendError, setSendError] = useState<unknown>(null);
   const [results, setResults] = useState<{ hash: string; count: number }[]>([]);
+  const [dragActive, setDragActive] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
+
+  const loadCsvFile = useCallback((file: File) => {
+    setFileError(null);
+    if (!/\.csv$/i.test(file.name) && file.type && file.type !== "text/csv") {
+      setFileError("Only .csv files are supported.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCsv(typeof reader.result === "string" ? reader.result : "");
+      setReceipt(null);
+    };
+    reader.onerror = () => setFileError("Could not read that file.");
+    reader.readAsText(file);
+  }, []);
 
   const client = useMemo(
     () =>
@@ -167,8 +184,42 @@ export default function PayrollPage() {
         <h2>Recipients</h2>
         <p className="small muted m-0">
           One per line: <code>account address, amount</code>. Lines starting
-          with <code>#</code> are ignored.
+          with <code>#</code> are ignored. Paste below, or drop/upload a CSV
+          file.
         </p>
+
+        <div
+          className={`dropzone${dragActive ? " dropzone--active" : ""}`}
+          onDragOver={(event) => {
+            event.preventDefault();
+            setDragActive(true);
+          }}
+          onDragLeave={() => setDragActive(false)}
+          onDrop={(event) => {
+            event.preventDefault();
+            setDragActive(false);
+            const file = event.dataTransfer.files?.[0];
+            if (file) loadCsvFile(file);
+          }}
+        >
+          <p className="small muted m-0">Drag a .csv file here, or</p>
+          <label className="button" htmlFor="payroll-csv-file">
+            Choose file
+          </label>
+          <input
+            id="payroll-csv-file"
+            type="file"
+            accept=".csv,text/csv"
+            className="sr-only"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) loadCsvFile(file);
+              event.target.value = "";
+            }}
+          />
+        </div>
+        {fileError ? <p className="small text-danger m-0">{fileError}</p> : null}
+
         <textarea
           value={csv}
           onChange={(event) => {
