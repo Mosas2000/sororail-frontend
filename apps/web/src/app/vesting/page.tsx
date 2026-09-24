@@ -133,6 +133,11 @@ function GrantCard({ position }: { position: Position }) {
       <div className="card stack stack--tight">
         <PositionHeader position={position} />
         <ErrorNotice error={loadError} />
+        <div>
+          <button type="button" onClick={() => void refresh()}>
+            Retry
+          </button>
+        </div>
       </div>
     );
   }
@@ -277,7 +282,7 @@ function GrantCard({ position }: { position: Position }) {
           lines={[
             {
               label: "Returns to you",
-              value: <Money value={Math.max(0n, grant.total - grant.claimed - (claimable ?? 0n))} approximate />,
+              value: <Money value={grant.total - grant.claimed - (claimable ?? 0n) > 0n ? grant.total - grant.claimed - (claimable ?? 0n) : 0n} approximate />,
             },
             {
               label: "Stays claimable by beneficiary",

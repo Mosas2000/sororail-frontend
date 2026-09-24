@@ -35,14 +35,3 @@ export function PositionCount({ kind }: { kind: PositionKind }) {
 
   return <span className="pill">{positions.length} tracked</span>;
 }
-
-export function SubscriptionCount() {
-  const subscriptions = usePositions("recurring");
-
-  return (
-    <>
-      <strong>{subscriptions.length}</strong> subscription
-      {subscriptions.length === 1 ? "" : "s"} tracked.
-    </>
-  );
-}
