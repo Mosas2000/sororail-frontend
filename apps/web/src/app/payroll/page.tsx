@@ -208,7 +208,7 @@ export default function PayrollPage() {
       ) : null}
 
       <div className="card stack stack--tight">
-        <h2>Recipients</h2>
+        <h2 id="recipients-heading">Recipients</h2>
         <p className="small muted m-0">
           One per line: <code>account address, amount</code>. Lines starting
           with <code>#</code> are ignored. Paste below, or drop/upload a CSV
@@ -247,7 +247,11 @@ export default function PayrollPage() {
         </div>
         {fileError ? <p className="small text-danger m-0">{fileError}</p> : null}
 
+        <label htmlFor="payroll-csv-textarea" className="sr-only">
+          Payroll CSV data
+        </label>
         <textarea
+          id="payroll-csv-textarea"
           value={csv}
           onChange={(event) => {
             setCsv(event.target.value);
@@ -259,7 +263,7 @@ export default function PayrollPage() {
 
         {parsed.length > 0 ? (
           <div className="table-scroll">
-            <table>
+            <table aria-describedby="recipients-heading">
               <thead>
                 <tr>
                   <th>Line</th>
