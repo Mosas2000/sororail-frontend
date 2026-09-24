@@ -27,21 +27,156 @@ export interface Position {
   addedAt: number;
 }
 
-const STORAGE_KEY = "sororail.positions.v1";
+const STORAGE_KEY_PREFIX = "sororail.positions";
+
+/**
+ * Schema version of the registry written by this build.
+ *
+ * The on-disk key carries the version (`sororail.positions.vN`) so a future
+ * build can read older keys and upgrade them — see `MIGRATIONS`.
+ */
+const SCHEMA_VERSION = 1;
+
+const STORAGE_KEY = `${STORAGE_KEY_PREFIX}.v${SCHEMA_VERSION}`;
+
+/**
+ * Versioned upgraders applied when reading. The key is the version being
+ * upgraded *from*; each step must produce data the next step (or the final
+ * validator) accepts, and steps chain until `SCHEMA_VERSION`.
+ *
+ * When the stored shape changes — say a `network` or `token` field is added —
+ * add a step here that fills the new field on every existing entry, then bump
+ * `SCHEMA_VERSION` and the key suffix. Without this hook `isPosition` would
+ * silently drop every pre-upgrade entry instead of upgrading it.
+ */
+const MIGRATIONS: Record<number, (data: unknown) => unknown> = {
+  // Example for a future v1 → v2 change:
+  // 1: (data) => upgradeNetworkField(data),
+};
+
+/** Listeners notified whenever the registry changes (this tab or another). */
+const storeListeners = new Set<() => void>();
+
+/**
+ * Snapshot caches. `useSyncExternalStore` requires `getSnapshot` to return a
+ * stable reference until the store actually changes, so sorted/filtered
+ * results are memoised and dropped together on invalidation.
+ */
+let allSnapshot: Position[] | null = null;
+const kindSnapshots = new Map<PositionKind, Position[]>();
+
+function invalidateSnapshot(): void {
+  allSnapshot = null;
+  kindSnapshots.clear();
+}
+
+function emit(): void {
+  invalidateSnapshot();
+  for (const listener of storeListeners) listener();
+}
+
+function handleStorageEvent(event: StorageEvent): void {
+  // `key === null` means the whole area was cleared.
+  if (event.key !== null && !event.key.startsWith(STORAGE_KEY_PREFIX)) return;
+  emit();
+}
+
+/**
+ * Subscribe to registry changes. Compatible with `useSyncExternalStore`:
+ * the returned function unsubscribes, and same-tab writes plus other-tab
+ * `storage` events both notify.
+ */
+export function subscribePositions(listener: () => void): () => void {
+  if (typeof window === "undefined") return () => {};
+  const first = storeListeners.size === 0;
+  storeListeners.add(listener);
+  if (first) window.addEventListener("storage", handleStorageEvent);
+  return () => {
+    storeListeners.delete(listener);
+    if (storeListeners.size === 0) {
+      window.removeEventListener("storage", handleStorageEvent);
+    }
+  };
+}
+
+/**
+ * Memoised registry snapshot for `useSyncExternalStore`.
+ *
+ * Returns the same array reference until the store changes, which React
+ * needs to compare snapshots, and reads localStorage during the first client
+ * render — not in an effect — so consumers never paint an empty state first.
+ */
+export function getPositionsSnapshot(kind?: PositionKind): Position[] {
+  if (!kind) {
+    if (allSnapshot === null) {
+      allSnapshot = read().sort((a, b) => b.addedAt - a.addedAt);
+    }
+    return allSnapshot;
+  }
+  let snapshot = kindSnapshots.get(kind);
+  if (!snapshot) {
+    snapshot = getPositionsSnapshot().filter((position) => position.kind === kind);
+    kindSnapshots.set(kind, snapshot);
+  }
+  return snapshot;
+}
+
+/**
+ * Run stored JSON through the migration chain so entries written by older
+ * builds upgrade to the current schema instead of failing validation.
+ *
+ * `fromVersion` is the schema of the key the raw JSON came from. Returns
+ * `null` when a required step is missing (should not happen while steps are
+ * kept chained to `SCHEMA_VERSION`).
+ */
+function migrate(data: unknown, fromVersion: number): unknown | null {
+  let current = data;
+  let version = fromVersion;
+  while (version < SCHEMA_VERSION) {
+    const step = MIGRATIONS[version];
+    if (!step) return null;
+    current = step(current);
+    version += 1;
+  }
+  return current;
+}
 
 function read(): Position[] {
   if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter(isPosition);
-  } catch {
-    // A corrupt or unreadable store must not take the app down; the contracts
-    // are the source of truth and the user can re-add addresses.
-    return [];
+
+  // Prefer the current key, then walk down to older versioned keys so data
+  // written before a schema bump is migrated rather than abandoned.
+  for (let version = SCHEMA_VERSION; version >= 1; version -= 1) {
+    let raw: string | null;
+    try {
+      raw = window.localStorage.getItem(`${STORAGE_KEY_PREFIX}.v${version}`);
+    } catch {
+      return [];
+    }
+    if (raw === null) continue;
+
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      const upgraded = migrate(parsed, version);
+      if (upgraded === null || !Array.isArray(upgraded)) return [];
+      const positions = upgraded.filter(isPosition);
+      if (version < SCHEMA_VERSION) {
+        // Persist the upgrade under the current key so the next read starts
+        // clean. Best effort: a failed write is retried on the next load.
+        try {
+          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(positions));
+        } catch {
+          // Quota or private browsing; the in-memory upgrade still applies.
+        }
+      }
+      return positions;
+    } catch {
+      // A corrupt or unreadable store must not take the app down; the contracts
+      // are the source of truth and the user can re-add addresses.
+      return [];
+    }
   }
+  return [];
 }
 
 function isPosition(value: unknown): value is Position {
@@ -66,12 +201,11 @@ function write(positions: Position[]): void {
   } catch {
     // Private browsing, or a full quota. Nothing is lost that matters.
   }
-  window.dispatchEvent(new Event("sororail:positions"));
+  emit();
 }
 
 export function listPositions(kind?: PositionKind): Position[] {
-  const all = read().sort((a, b) => b.addedAt - a.addedAt);
-  return kind ? all.filter((p) => p.kind === kind) : all;
+  return getPositionsSnapshot(kind);
 }
 
 export function addPosition(
