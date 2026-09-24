@@ -1,40 +1,41 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { ContractLink } from "@/components/ContractLink";
 import {
   addPosition,
   exportPositions,
+  getPositionsSnapshot,
   importPositions,
-  listPositions,
   looksLikeContractId,
   removePosition,
   renamePosition,
   restorePosition,
+  subscribePositions,
   type Position,
   type PositionKind,
 } from "@/lib/positions";
 
 const UNDO_WINDOW_MS = 6000;
 
-/** Subscribes to the local registry, re-reading when it changes. */
+/** Stable SSR snapshot: localStorage does not exist on the server. */
+const SERVER_POSITIONS: Position[] = [];
+
+/**
+ * Subscribes to the local registry, re-reading when it changes.
+ *
+ * `useSyncExternalStore` reads the snapshot during the first client render
+ * rather than in an effect, so the empty state can no longer flash before
+ * `localStorage` is consulted, and several components on one page share one
+ * consistent read instead of four parallel parses.
+ */
 export function usePositions(kind: PositionKind): Position[] {
-  const [positions, setPositions] = useState<Position[]>([]);
-
-  const refresh = useCallback(() => setPositions(listPositions(kind)), [kind]);
-
-  useEffect(() => {
-    refresh();
-    window.addEventListener("sororail:positions", refresh);
-    window.addEventListener("storage", refresh);
-    return () => {
-      window.removeEventListener("sororail:positions", refresh);
-      window.removeEventListener("storage", refresh);
-    };
-  }, [refresh]);
-
-  return positions;
+  return useSyncExternalStore(
+    subscribePositions,
+    () => getPositionsSnapshot(kind),
+    () => SERVER_POSITIONS,
+  );
 }
 
 /**

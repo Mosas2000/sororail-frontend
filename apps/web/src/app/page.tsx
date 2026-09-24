@@ -8,7 +8,7 @@ import {
   SubscriptionCount,
 } from "@/components/OverviewInteractive";
 import { PositionBackup } from "@/components/PositionRegistry";
-import { BATCH_PAYOUT_CONTRACT } from "@/lib/network";
+import { BATCH_PAYOUT_CONTRACT, shortAddress } from "@/lib/network";
 
 export default function OverviewPage() {
   return (
@@ -67,7 +67,7 @@ export default function OverviewPage() {
           <code className="addr">batch_payout</code> is the exception — it is
           stateless, so one shared deployment serves everybody:{" "}
           <ContractLink id={BATCH_PAYOUT_CONTRACT} className="addr">
-            {BATCH_PAYOUT_CONTRACT.slice(0, 8)}…
+            {shortAddress(BATCH_PAYOUT_CONTRACT, 6)}
           </ContractLink>
         </p>
       </div>

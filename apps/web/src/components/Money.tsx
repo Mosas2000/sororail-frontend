@@ -2,6 +2,8 @@
 
 import { formatAmount } from "@sororail/sdk";
 
+import { shortAddress } from "@/lib/network";
+
 /**
  * A monetary figure.
  *
@@ -52,7 +54,7 @@ export function Money({
 
 /** A contract or account address, shortened but copyable in full. */
 export function Address({ value, href }: { value: string; href?: string }) {
-  const short = `${value.slice(0, 6)}…${value.slice(-6)}`;
+  const short = shortAddress(value, 6);
   if (href) {
     return (
       <a className="addr" href={href} target="_blank" rel="noreferrer" title={value}>
