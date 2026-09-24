@@ -2,7 +2,7 @@
 
 import { StrKey } from "@stellar/stellar-sdk";
 
-export type PositionKind = "stream" | "vesting" | "escrow" | "recurring";
+export type PositionKind = "stream" | "vesting" | "escrow";
 
 export interface Position {
   kind: PositionKind;
@@ -173,7 +173,7 @@ function isPosition(value: unknown): value is Position {
     typeof candidate["addedAt"] === "number" &&
     Number.isFinite(candidate["addedAt"]) &&
     typeof candidate["kind"] === "string" &&
-    ["stream", "vesting", "escrow", "recurring"].includes(
+    ["stream", "vesting", "escrow"].includes(
       candidate["kind"] as string,
     )
   );

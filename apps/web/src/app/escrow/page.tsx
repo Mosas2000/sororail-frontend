@@ -108,7 +108,7 @@ function EscrowCard({ position }: { position: Position }) {
               ? await client.refund(address)
               : await client.dispute(address);
       const sent = await call.signAndSend(signer);
-      setDone({ text: `${action} succeeded.`, hash: sent.hash });
+      setDone({ text: successMessage(action), hash: sent.hash });
       setPending(null);
       await refresh();
     } catch (error) {
@@ -131,6 +131,11 @@ function EscrowCard({ position }: { position: Position }) {
       <div className="card stack stack--tight">
         <PositionHeader position={position} />
         <ErrorNotice error={loadError} />
+        <div>
+          <button type="button" onClick={() => void refresh()}>
+            Retry
+          </button>
+        </div>
       </div>
     );
   }
@@ -294,6 +299,19 @@ function EscrowCard({ position }: { position: Position }) {
       ) : null}
     </div>
   );
+}
+
+function successMessage(action: Action): string {
+  switch (action) {
+    case "fund":
+      return "Escrow funded.";
+    case "release":
+      return "Funds released to the beneficiary.";
+    case "refund":
+      return "Funds refunded to the depositor.";
+    case "dispute":
+      return "Dispute raised. The arbiter will now decide.";
+  }
 }
 
 function confirmTitle(action: Action): string {
