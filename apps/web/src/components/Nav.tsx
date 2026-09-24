@@ -16,7 +16,8 @@ const links = [
 
 export function Nav() {
   const pathname = usePathname();
-  const { address, connect, disconnect, connecting, error } = useWallet();
+  const { address, connect, disconnect, connecting, error, networkError } =
+    useWallet();
 
   return (
     <nav className="nav">
@@ -72,6 +73,19 @@ export function Nav() {
                 friendbot
               </a>{" "}
               will do it.
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {networkError ? (
+        <div className="nav__inner nav__feedback">
+          <div className="notice notice--error" role="alert">
+            <div className="notice__title">Wrong network in Freighter</div>
+            <div>{networkError}</div>
+            <div className="notice__detail">
+              Open Freighter, choose the network menu at the top, and select
+              Testnet. This page updates on its own once it matches.
             </div>
           </div>
         </div>

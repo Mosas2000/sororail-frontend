@@ -11,6 +11,8 @@ import { expect, test, type Page } from "@playwright/test";
  */
 
 const STUB_ADDRESS = "GC4RWN3HH5H5GMD3NT4MOIYC3H3Q3NUF4BFWATGDI7NKRVLRURKHSIMC";
+const OTHER_ADDRESS = "GBZXN7PIRZGNMHGA7MUUUF4GWPY5AYPV6LY4UV2GL6VJGIQRXFDNMADI";
+const MAINNET_PASSPHRASE = "Public Global Stellar Network ; September 2015";
 
 /**
  * Waits for a connected session.
@@ -24,18 +26,40 @@ async function connect(page: Page) {
   await expect(page.getByText("Disconnect")).toBeVisible({ timeout: 10_000 });
 }
 
-/** Installs a fake Freighter that reports connected and returns an address. */
-async function stubWallet(page: Page, options: { connected?: boolean } = {}) {
+/**
+ * Installs a fake Freighter that reports connected and returns an address.
+ *
+ * `networkPassphrase` makes it report a network; `switchFreighterAccount`
+ * changes the selected account the way a user would inside the extension.
+ */
+async function stubWallet(
+  page: Page,
+  options: { connected?: boolean; networkPassphrase?: string } = {},
+) {
   const connected = options.connected ?? true;
   await page.addInitScript(
-    ({ address, isConnected }) => {
-      (globalThis as Record<string, unknown>)["freighterApi"] = {
+    ({ address, isConnected, networkPassphrase }) => {
+      let current = address;
+      const api: Record<string, unknown> = {
         isConnected: async () => isConnected,
-        getAddress: async () => ({ address }),
+        getAddress: async () => ({ address: current }),
         signTransaction: async (xdr: string) => ({ signedTxXdr: xdr }),
       };
+      if (networkPassphrase) {
+        api["getNetworkDetails"] = async () => ({ network: "", networkPassphrase });
+      }
+      (globalThis as Record<string, unknown>)["freighterApi"] = api;
+      (globalThis as Record<string, unknown>)["switchFreighterAccount"] = (
+        next: string,
+      ) => {
+        current = next;
+      };
     },
-    { address: STUB_ADDRESS, isConnected: connected },
+    {
+      address: STUB_ADDRESS,
+      isConnected: connected,
+      networkPassphrase: options.networkPassphrase ?? "",
+    },
   );
 }
 
@@ -89,6 +113,34 @@ test.describe("wallet", () => {
     await page.goto("/");
     await page.getByRole("button", { name: "Connect wallet" }).first().click();
     await expect(page.getByText(/not connected/i)).toBeVisible();
+  });
+
+  test("follows an account switch made inside Freighter", async ({ page }) => {
+    await stubWallet(page);
+    await page.goto("/");
+    await connect(page);
+
+    await page.evaluate((next) => {
+      (
+        globalThis as unknown as { switchFreighterAccount: (a: string) => void }
+      ).switchFreighterAccount(next);
+      // Returning to the tab is when a switch made in the popup shows up.
+      window.dispatchEvent(new Event("focus"));
+    }, OTHER_ADDRESS);
+
+    const nav = page.locator("nav");
+    await expect(nav.locator(`[title="${OTHER_ADDRESS}"]`)).toBeVisible();
+    await expect(nav.locator(`[title="${STUB_ADDRESS}"]`)).toHaveCount(0);
+  });
+
+  test("asks to switch Freighter to Testnet when it is on another network", async ({
+    page,
+  }) => {
+    await stubWallet(page, { networkPassphrase: MAINNET_PASSPHRASE });
+    await page.goto("/");
+    await connect(page);
+    await expect(page.getByText("Wrong network in Freighter")).toBeVisible();
+    await expect(page.getByText(/Switch Freighter to Testnet/)).toBeVisible();
   });
 
   test("disconnect returns to the connect prompt", async ({ page }) => {

@@ -1,6 +1,12 @@
 "use client";
 
-import { ContractError, NetworkError, ValidationError } from "@sororail/sdk";
+import {
+  ContractError,
+  NetworkError,
+  NetworkMismatchError,
+  SigningError,
+  ValidationError,
+} from "@sororail/sdk";
 import type { ReactNode } from "react";
 
 import { explorerTx } from "@/lib/network";
@@ -20,10 +26,13 @@ export function ErrorNotice({ error }: { error: unknown }) {
   if (!error) return null;
 
   const recovery = recoveryFor(error);
+  // Wallet failures (declined, locked, switched account, wrong network) carry
+  // a message written for a person too, so they are shown rather than hidden.
   const isSdkError =
     error instanceof ContractError ||
     error instanceof NetworkError ||
-    error instanceof ValidationError;
+    error instanceof ValidationError ||
+    error instanceof SigningError;
   const message =
     isSdkError ? error.message : "Something went wrong. Please try again.";
   const details =
@@ -38,6 +47,8 @@ export function ErrorNotice({ error }: { error: unknown }) {
   let heading = "That did not work";
   if (error instanceof ValidationError) heading = "Check the details";
   if (error instanceof NetworkError) heading = "Could not reach the network";
+  if (error instanceof SigningError) heading = "Check your wallet";
+  if (error instanceof NetworkMismatchError) heading = "Wrong network in Freighter";
 
   return (
     <div className="notice notice--error">
