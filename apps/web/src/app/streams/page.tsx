@@ -289,12 +289,10 @@ function StreamCard({ position }: { position: Position }) {
             },
             {
               label: "Returns to you",
-              value: (
-                <Money
-                  value={Math.max(0n, stream.deposited - stream.withdrawn - (available ?? 0n))}
-                  approximate
-                />
-              ),
+              value: (() => {
+                const remaining = stream.deposited - stream.withdrawn - (available ?? 0n);
+                return <Money value={remaining > 0n ? remaining : 0n} approximate />;
+              })(),
             },
             { label: "Recipient", value: <Address value={stream.recipient} /> },
           ]}

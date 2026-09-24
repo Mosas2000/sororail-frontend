@@ -277,7 +277,10 @@ function GrantCard({ position }: { position: Position }) {
           lines={[
             {
               label: "Returns to you",
-              value: <Money value={Math.max(0n, grant.total - grant.claimed - (claimable ?? 0n))} approximate />,
+              value: (() => {
+                const remaining = grant.total - grant.claimed - (claimable ?? 0n);
+                return <Money value={remaining > 0n ? remaining : 0n} approximate />;
+              })(),
             },
             {
               label: "Stays claimable by beneficiary",
