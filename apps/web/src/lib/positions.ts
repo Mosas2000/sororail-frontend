@@ -1,21 +1,6 @@
 "use client";
 
-/**
- * The registry of contract instances this browser knows about.
- *
- * Each SoroRail contract except `batch_payout` holds **one position per
- * deployed instance** — one escrow, one stream, one grant, one subscription.
- * There is therefore no on-chain index to enumerate: nothing links "my
- * streams" to an account, because each stream is its own contract.
- *
- * So the app keeps a list of addresses the user has told it about. This is
- * exactly the "database is a cache" rule from the spec, in its smallest form:
- * **the addresses are a convenience, and every figure shown for one is read
- * from the chain.** Losing this list loses no money and no state — the
- * contracts are untouched, and re-adding the address restores the view.
- *
- * If the contracts move to an id-keyed design, this file is what disappears.
- */
+import { StrKey } from "@stellar/stellar-sdk";
 
 export type PositionKind = "stream" | "vesting" | "escrow";
 
@@ -212,32 +197,38 @@ export function addPosition(
   kind: PositionKind,
   contractId: string,
   label: string,
-): void {
-  const trimmed = contractId.trim();
+): boolean {
+  const normalized = contractId.trim().toUpperCase();
   const existing = read();
-  if (existing.some((p) => p.contractId === trimmed)) return;
+  if (existing.some((p) => p.contractId.toUpperCase() === normalized)) {
+    return false;
+  }
   write([
     ...existing,
-    { kind, contractId: trimmed, label: label.trim() || trimmed, addedAt: Date.now() },
+    { kind, contractId: normalized, label: label.trim() || normalized, addedAt: Date.now() },
   ]);
+  return true;
 }
 
 export function removePosition(contractId: string): void {
-  write(read().filter((p) => p.contractId !== contractId));
+  const normalized = contractId.trim().toUpperCase();
+  write(read().filter((p) => p.contractId.toUpperCase() !== normalized));
 }
 
 /** Reinsert a previously removed position, e.g. from an undo toast. */
 export function restorePosition(position: Position): void {
   const existing = read();
-  if (existing.some((p) => p.contractId === position.contractId)) return;
-  write([...existing, position]);
+  const normalized = position.contractId.trim().toUpperCase();
+  if (existing.some((p) => p.contractId.toUpperCase() === normalized)) return;
+  write([...existing, { ...position, contractId: normalized }]);
 }
 
 export function renamePosition(contractId: string, label: string): void {
   const trimmed = label.trim();
   if (!trimmed) return;
+  const normalized = contractId.trim().toUpperCase();
   write(
-    read().map((p) => (p.contractId === contractId ? { ...p, label: trimmed } : p)),
+    read().map((p) => (p.contractId.toUpperCase() === normalized ? { ...p, label: trimmed } : p)),
   );
 }
 
@@ -272,8 +263,15 @@ export function importPositions(json: string): ImportPositionsResult {
   }
 
   const existing = read();
-  const existingIds = new Set(existing.map((p) => p.contractId));
-  const toAdd = incoming.filter((p) => !existingIds.has(p.contractId));
+  const existingIds = new Set(existing.map((p) => p.contractId.toUpperCase()));
+  const toAdd: Position[] = [];
+  for (const p of incoming) {
+    const normalizedId = p.contractId.trim().toUpperCase();
+    if (!existingIds.has(normalizedId)) {
+      existingIds.add(normalizedId);
+      toAdd.push({ ...p, contractId: normalizedId });
+    }
+  }
 
   write([...existing, ...toAdd]);
 
@@ -282,5 +280,6 @@ export function importPositions(json: string): ImportPositionsResult {
 
 /** A contract address is a 56-character `C…` strkey. */
 export function looksLikeContractId(value: string): boolean {
-  return /^C[A-Z2-7]{55}$/.test(value.trim());
+  const trimmed = value.trim().toUpperCase();
+  return StrKey.isValidContract(trimmed);
 }
