@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { FRIENDBOT_URL, shortAddress } from "@/lib/network";
+import { shortAddress } from "@/lib/network";
 import { useWallet } from "@/lib/wallet";
 
 const links = [
@@ -65,15 +65,7 @@ export function Nav() {
       {error ? (
         <div className="nav__inner nav__feedback">
           <div className="notice notice--error">
-            <div>{error}</div>
-            <div className="notice__detail">
-              Freighter is the supported wallet. A testnet account also needs
-              funding —{" "}
-              <a href={FRIENDBOT_URL} target="_blank" rel="noreferrer">
-                friendbot
-              </a>{" "}
-              will do it.
-            </div>
+            <div>{error.message}</div>
           </div>
         </div>
       ) : null}

@@ -1,6 +1,11 @@
 "use client";
 
-import { EscrowClient, isTerminalEscrowState, type Escrow } from "@sororail/sdk";
+import {
+  EscrowClient,
+  SigningError,
+  isTerminalEscrowState,
+  type Escrow,
+} from "@sororail/sdk";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { CardSkeleton } from "@/components/CardSkeleton";
@@ -85,7 +90,12 @@ function EscrowCard({ position }: { position: Position }) {
   }, [refresh]);
 
   async function run(action: Action) {
-    if (!signer || !address) return;
+    if (!signer || !address) {
+      setActionError(
+        new SigningError("Wallet disconnected. Reconnect to continue."),
+      );
+      return;
+    }
     setBusy(true);
     setActionError(null);
     try {
