@@ -47,3 +47,15 @@ export function parseCsv(text: string): ParsedLine[] {
       }
     });
 }
+
+/** Removes successfully paid source rows while preserving comments and errors. */
+export function removeCsvLines(
+  text: string,
+  lineNumbers: Iterable<number>,
+): string {
+  const removed = new Set(lineNumbers);
+  return text
+    .split("\n")
+    .filter((_, index) => !removed.has(index + 1))
+    .join("\n");
+}

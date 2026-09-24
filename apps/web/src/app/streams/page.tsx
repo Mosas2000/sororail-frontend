@@ -1,6 +1,6 @@
 "use client";
 
-import { StreamClient, type Stream } from "@sororail/sdk";
+import { SigningError, StreamClient, type Stream } from "@sororail/sdk";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { CardSkeleton } from "@/components/CardSkeleton";
@@ -103,7 +103,12 @@ function StreamCard({ position }: { position: Position }) {
   }, []);
 
   async function run(action: "withdraw" | "cancel") {
-    if (!signer) return;
+    if (!signer) {
+      setActionError(
+        new SigningError("Wallet disconnected. Reconnect to continue."),
+      );
+      return;
+    }
     setBusy(true);
     setActionError(null);
     try {

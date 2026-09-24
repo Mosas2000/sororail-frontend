@@ -33,7 +33,7 @@ interface WalletState {
   address: string | null;
   signer: Signer | null;
   connecting: boolean;
-  error: string | null;
+  error: Error | null;
   /**
    * Set while Freighter is on a different network than the app, saying which
    * network to switch to. Signing is refused until it clears.
@@ -70,7 +70,7 @@ const WalletContext = createContext<WalletState | null>(null);
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [signer, setSigner] = useState<FreighterSigner | null>(null);
   const [connecting, setConnecting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Error | null>(null);
   const [networkError, setNetworkError] = useState<string | null>(null);
   /**
    * Set when the user explicitly disconnects, to stop the restore effect below
@@ -90,8 +90,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     } catch (cause) {
       setError(
         cause instanceof Error
-          ? cause.message
-          : "Could not connect to a wallet.",
+          ? cause
+          : new Error("Could not connect to a wallet."),
       );
     } finally {
       setConnecting(false);
@@ -113,14 +113,30 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (disconnected) return;
     let cancelled = false;
-    void import("@sororail/sdk")
-      .then(({ FreighterSigner }) => FreighterSigner.connect())
-      .then((restored) => {
-        if (!cancelled) setSigner(restored);
-      })
-      .catch(() => {
-        /* No wallet, locked, or not yet authorised. Stay disconnected. */
-      });
+    void (async () => {
+      try {
+        const { FreighterSigner, SigningError } = await import("@sororail/sdk");
+        try {
+          const restored = await FreighterSigner.connect();
+          if (!cancelled) setSigner(restored);
+        } catch (cause) {
+          // Missing, locked, or not-yet-authorised wallets are normal while
+          // restoring. Anything else means the integration itself failed and
+          // must not be made to look like a disconnected wallet.
+          if (cause instanceof SigningError) return;
+          throw cause;
+        }
+      } catch (cause) {
+        console.error("Failed to restore the wallet session", cause);
+        if (!cancelled) {
+          setError(
+            cause instanceof Error
+              ? cause
+              : new Error("Could not restore the wallet session."),
+          );
+        }
+      }
+    })();
     return () => {
       cancelled = true;
     };

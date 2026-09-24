@@ -2,6 +2,7 @@
 
 import {
   BatchPayoutClient,
+  SigningError,
   type Payment,
   type Receipt,
 } from "@sororail/sdk";
@@ -17,7 +18,7 @@ import {
   NETWORK_PASSPHRASE,
   RPC_URL,
 } from "@/lib/network";
-import { parseCsv, type ParsedLine } from "@/lib/payroll";
+import { parseCsv, removeCsvLines, type ParsedLine } from "@/lib/payroll";
 import { useWallet } from "@/lib/wallet";
 
 const MAX_VISIBLE_VALID_ROWS = 200;
@@ -136,10 +137,16 @@ export default function PayrollPage() {
   }, [client, payments]);
 
   async function send() {
-    if (!signer || !address) return;
+    if (!signer || !address) {
+      setSendError(
+        new SigningError("Wallet disconnected. Reconnect to continue."),
+      );
+      return;
+    }
     setBusy(true);
     setSendError(null);
-    const sent: { hash: string; count: number }[] = [];
+    const sourceCsv = csv;
+    let paidCount = 0;
     try {
       for (const chunk of batches) {
         const call = await client.execute({
@@ -148,8 +155,18 @@ export default function PayrollPage() {
           recipients: chunk,
         });
         const result = await call.signAndSend(signer);
-        sent.push({ hash: result.hash, count: result.result.count });
-        setResults([...sent]);
+        paidCount += chunk.length;
+        setResults((current) => [
+          ...current,
+          { hash: result.hash, count: result.result.count },
+        ]);
+        setCsv(
+          removeCsvLines(
+            sourceCsv,
+            valid.slice(0, paidCount).map((line) => line.line),
+          ),
+        );
+        setReceipt(null);
       }
       setConfirming(false);
       setCsv("");

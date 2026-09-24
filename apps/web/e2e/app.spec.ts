@@ -105,7 +105,7 @@ test.describe("wallet", () => {
     await page.goto("/");
     await page.getByRole("button", { name: "Connect wallet" }).first().click();
     await expect(page.getByText(/Freighter was not found/i)).toBeVisible();
-    await expect(page.getByRole("link", { name: "friendbot" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "friendbot" })).toHaveCount(0);
   });
 
   test("reports a locked wallet distinctly from a missing one", async ({ page }) => {
@@ -113,6 +113,35 @@ test.describe("wallet", () => {
     await page.goto("/");
     await page.getByRole("button", { name: "Connect wallet" }).first().click();
     await expect(page.getByText(/not connected/i)).toBeVisible();
+    await expect(page.getByRole("link", { name: "friendbot" })).toHaveCount(0);
+  });
+
+  test("does not suggest funding when Freighter returns no address", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      (globalThis as Record<string, unknown>)["freighterApi"] = {
+        isConnected: async () => true,
+        getAddress: async () => ({ address: "" }),
+        signTransaction: async (xdr: string) => ({ signedTxXdr: xdr }),
+      };
+    });
+    await page.goto("/");
+    await page.getByRole("button", { name: "Connect wallet" }).first().click();
+    await expect(page.getByText(/did not return an address/i)).toBeVisible();
+    await expect(page.getByRole("link", { name: "friendbot" })).toHaveCount(0);
+  });
+
+  test("surfaces an unexpected restore failure", async ({ page }) => {
+    await page.addInitScript(() => {
+      (globalThis as Record<string, unknown>)["freighterApi"] = {
+        isConnected: async () => {
+          throw new Error("Freighter bridge crashed");
+        },
+      };
+    });
+    await page.goto("/");
+    await expect(page.getByText("Freighter bridge crashed")).toBeVisible();
   });
 
   test("follows an account switch made inside Freighter", async ({ page }) => {

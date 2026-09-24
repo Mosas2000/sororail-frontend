@@ -1,6 +1,6 @@
 "use client";
 
-import { VestingClient, type Grant } from "@sororail/sdk";
+import { SigningError, VestingClient, type Grant } from "@sororail/sdk";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { CardSkeleton } from "@/components/CardSkeleton";
@@ -93,7 +93,12 @@ function GrantCard({ position }: { position: Position }) {
   }, []);
 
   async function run(action: "claim" | "revoke") {
-    if (!signer) return;
+    if (!signer) {
+      setActionError(
+        new SigningError("Wallet disconnected. Reconnect to continue."),
+      );
+      return;
+    }
     setBusy(true);
     setActionError(null);
     try {
