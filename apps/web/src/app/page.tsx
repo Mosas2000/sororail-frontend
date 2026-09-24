@@ -5,7 +5,6 @@ import { ContractLink } from "@/components/ContractLink";
 import {
   ConnectWalletCard,
   PositionCount,
-  SubscriptionCount,
 } from "@/components/OverviewInteractive";
 import { PositionBackup } from "@/components/PositionRegistry";
 import { BATCH_PAYOUT_CONTRACT, shortAddress } from "@/lib/network";
@@ -27,7 +26,7 @@ export default function OverviewPage() {
         <Tile
           href="/payroll"
           title="Payroll"
-          body="Pay many recipients in one transaction, or set up a recurring charge."
+          body="Pay many recipients in one transaction."
         />
         <Tile
           href="/streams"
@@ -52,10 +51,10 @@ export default function OverviewPage() {
       <div className="card stack stack--tight">
         <h2>How this app finds your positions</h2>
         <p className="small muted m-0">
-          Each escrow, stream, grant and subscription is its own deployed
-          contract, holding exactly one position for its whole life. There is no
-          on-chain index tying them to your account, so this app keeps a list of
-          addresses you have told it about, in this browser only.
+          Each escrow, stream and grant is its own deployed contract, holding
+          exactly one position for its whole life. There is no on-chain index
+          tying them to your account, so this app keeps a list of addresses you
+          have told it about, in this browser only.
         </p>
         <p className="small muted m-0">
           That list is a convenience, not a record. Every balance and state you
@@ -63,7 +62,6 @@ export default function OverviewPage() {
           list changes nothing on chain.
         </p>
         <p className="small muted m-0">
-          <SubscriptionCount />{" "}
           <code className="addr">batch_payout</code> is the exception — it is
           stateless, so one shared deployment serves everybody:{" "}
           <ContractLink id={BATCH_PAYOUT_CONTRACT} className="addr">

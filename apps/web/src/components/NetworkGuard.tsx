@@ -1,6 +1,6 @@
 "use client";
 
-import { Server } from "@stellar/stellar-sdk";
+import { rpc } from "@stellar/stellar-sdk";
 import { useEffect, useState, type ReactNode } from "react";
 
 import { NETWORK_PASSPHRASE, RPC_URL } from "@/lib/network";
@@ -10,11 +10,11 @@ export function NetworkGuard({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
-    void new Server(RPC_URL)
+    void new rpc.Server(RPC_URL)
       .getNetwork()
       .then((network) => {
         if (!mounted) return;
-        if (network !== NETWORK_PASSPHRASE) {
+        if (network.passphrase !== NETWORK_PASSPHRASE) {
           console.error("Configured RPC network does not match testnet.");
           setStatus("error");
           return;

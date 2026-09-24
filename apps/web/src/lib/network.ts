@@ -10,14 +10,8 @@ import { TESTNET_DEFAULTS } from "@sororail/sdk";
  */
 export const NETWORK_PASSPHRASE = Networks.TESTNET;
 
- testnet-rpc-validation-sdk-example-config
 export const RPC_URL =
   process.env["NEXT_PUBLIC_RPC_URL"] ?? TESTNET_DEFAULTS.rpcUrl;
-
-const DEFAULT_RPC_URL = "https://soroban-testnet.stellar.org";
-
-export const RPC_URL = process.env["NEXT_PUBLIC_RPC_URL"] ?? DEFAULT_RPC_URL;
- main
 
 /** Native XLM's Stellar Asset Contract on testnet. */
 export const NATIVE_TOKEN =
