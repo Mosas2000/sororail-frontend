@@ -27,6 +27,7 @@ export default function PayrollPage() {
   const { address, signer, connect } = useWallet();
   const [csv, setCsv] = useState("");
   const [cap, setCap] = useState<number | null>(null);
+  const [capError, setCapError] = useState<unknown>(null);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [previewError, setPreviewError] = useState<unknown>(null);
   const [confirming, setConfirming] = useState(false);
@@ -66,10 +67,17 @@ export default function PayrollPage() {
   // limits and can differ between deployments.
   useEffect(() => {
     if (!address) return;
+    setCapError(null);
     void client
       .maxRecipients()
-      .then(setCap)
-      .catch(() => setCap(null));
+      .then((value) => {
+        setCap(value);
+        setCapError(null);
+      })
+      .catch((error) => {
+        setCap(null);
+        setCapError(error);
+      });
   }, [client, address]);
 
 
@@ -109,16 +117,18 @@ export default function PayrollPage() {
 
   // Duplicates are legitimate on chain -- two invoices for one contractor --
   // so this warns rather than blocks. Catching them here is exactly where the
-  // contract expects the check to live.
+  // contract expects the check to live. Check against all parsed lines (valid
+  // and invalid), not just valid ones, to catch cases where the same address
+  // appears in both a valid line and a line with a parsing error.
   const duplicates = useMemo(() => {
     const seen = new Set<string>();
     const repeated = new Set<string>();
-    for (const payment of payments) {
-      if (seen.has(payment.to)) repeated.add(payment.to);
-      seen.add(payment.to);
+    for (const line of parsed) {
+      if (line.to && seen.has(line.to)) repeated.add(line.to);
+      if (line.to) seen.add(line.to);
     }
     return [...repeated];
-  }, [payments]);
+  }, [parsed]);
 
   const batches = useMemo(
     () => (cap ? BatchPayoutClient.chunk(payments, cap) : [payments]),
@@ -313,6 +323,19 @@ export default function PayrollPage() {
               That is allowed — the contract does not reject duplicates, and two
               lines for one contractor is a normal thing to want. Check it is
               deliberate before sending.
+            </div>
+          </div>
+        ) : null}
+
+        {capError ? (
+          <div className="notice notice--warn">
+            <div className="notice__title">
+              Could not verify the maximum recipients per batch
+            </div>
+            <div className="notice__detail">
+              The batch cap could not be determined (network issue, contract not
+              found, or RPC error). The payroll will be sent as one transaction.
+              If it fails, you may need to split it manually.
             </div>
           </div>
         ) : null}

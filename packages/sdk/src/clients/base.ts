@@ -24,11 +24,26 @@ export interface ClientOptions {
    * touches the network; the signer's key is the usual choice.
    */
   publicKey?: string;
-  /** Inclusion fee in stroops. Defaults to `BASE_FEE`. */
+  /**
+   * Inclusion fee in stroops. Defaults to `BASE_FEE`.
+   *
+   * The fee is deducted from the account's balance for each transaction built
+   * and submitted, even if the transaction later fails. Choose a fee that
+   * reflects the current network congestion to avoid overpaying or timing out.
+   */
   fee?: string;
   /** Transaction validity window in seconds. Defaults to 30. */
   timeoutSeconds?: number;
-  /** Allow plain HTTP. Only for a local quickstart node. */
+  /**
+   * Allow plain HTTP connections. Only for a local quickstart node.
+   *
+   * ⚠️ **Security warning**: Enabling this for a remote RPC URL sends
+   * unsigned/simulated transaction data over plaintext HTTP. This exposes
+   * contract calls, amounts, recipient addresses, and account state to
+   * network eavesdropping. Use only with local nodes where the RPC connection
+   * does not cross untrusted networks. For remote RPC endpoints, always use
+   * HTTPS (the default; this must remain `false`).
+   */
   allowHttp?: boolean;
 }
 
